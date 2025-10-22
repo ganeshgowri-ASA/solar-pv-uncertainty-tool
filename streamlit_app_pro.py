@@ -32,6 +32,7 @@ from file_utilities import (
     DataValidator, PDFExtractor, ExcelExtractor,
     DatasheetExtractor, PVsystPANParser
 )
+from report_generator import ISO17025ReportGenerator
 
 # Page configuration
 st.set_page_config(
@@ -1644,6 +1645,324 @@ def section_7_financial_impact():
                 """)
 
 
+def section_8_professional_reporting():
+    """Section 8: Professional ISO 17025 Reporting"""
+    st.markdown('<div class="section-header">8️⃣ Section 8: Professional Reporting</div>',
+                unsafe_allow_html=True)
+
+    # Check if calculation results exist
+    if st.session_state.calculation_results is None:
+        st.warning("⚠️ Please complete uncertainty calculation first (Section 5).")
+        st.info("Navigate to Section 5 (Uncertainty) and click 'Calculate Combined Uncertainty' to proceed.")
+        return
+
+    st.info("📄 Generate professional ISO 17025 compliant reports in PDF and Excel formats")
+
+    # Report configuration section
+    st.markdown("### 📋 Report Configuration")
+
+    # Initialize report_config in session state if not exists
+    if 'report_config' not in st.session_state or st.session_state.report_config is None:
+        st.session_state.report_config = {}
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+        st.markdown("#### Laboratory Information")
+
+        company_name = st.text_input(
+            "Laboratory Name",
+            value=st.session_state.report_config.get('company_name', 'PV Testing Laboratory'),
+            help="Official name of the testing laboratory"
+        )
+
+        lab_address = st.text_area(
+            "Laboratory Address",
+            value=st.session_state.report_config.get('lab_address', ''),
+            help="Complete laboratory address",
+            height=100
+        )
+
+        lab_accreditation = st.text_input(
+            "Accreditation Number",
+            value=st.session_state.report_config.get('lab_accreditation', ''),
+            help="ISO 17025 accreditation number (if applicable)"
+        )
+
+        document_format = st.text_input(
+            "Document Format Number",
+            value=st.session_state.report_config.get('document_format', 'PV-UNC-001'),
+            help="Internal document format identifier"
+        )
+
+    with col2:
+        st.markdown("#### Report Details")
+
+        report_number = st.text_input(
+            "Report Number",
+            value=st.session_state.report_config.get('report_number', f"UNC-{datetime.now().strftime('%Y%m%d-%H%M')}"),
+            help="Unique report identifier"
+        )
+
+        client_name = st.text_input(
+            "Client Name",
+            value=st.session_state.report_config.get('client_name', ''),
+            help="Name of client requesting the test"
+        )
+
+        test_date = st.date_input(
+            "Test Date",
+            value=datetime.now().date(),
+            help="Date when measurements were performed"
+        )
+
+        report_date = st.date_input(
+            "Report Date",
+            value=datetime.now().date(),
+            help="Date when report is issued"
+        )
+
+    # Logo upload
+    st.markdown("#### Company Logo (Optional)")
+    logo_file = st.file_uploader(
+        "Upload Laboratory Logo",
+        type=['png', 'jpg', 'jpeg'],
+        help="Recommended size: 150x50 pixels or similar aspect ratio"
+    )
+
+    logo_path = None
+    if logo_file is not None:
+        # Save uploaded logo temporarily
+        logo_bytes = logo_file.read()
+        logo_path = f"/tmp/logo_{datetime.now().strftime('%Y%m%d%H%M%S')}.png"
+        with open(logo_path, 'wb') as f:
+            f.write(logo_bytes)
+        st.success(f"✅ Logo uploaded: {logo_file.name}")
+
+    # Signature section
+    st.markdown("### ✍️ Signature Information")
+
+    col1, col2, col3 = st.columns(3)
+
+    with col1:
+        st.markdown("#### Prepared By")
+        preparer_name = st.text_input(
+            "Name",
+            value=st.session_state.report_config.get('preparer_name', ''),
+            key="preparer_name"
+        )
+        preparer_title = st.text_input(
+            "Title",
+            value=st.session_state.report_config.get('preparer_title', 'Test Engineer'),
+            key="preparer_title"
+        )
+
+    with col2:
+        st.markdown("#### Reviewed By")
+        reviewer_name = st.text_input(
+            "Name",
+            value=st.session_state.report_config.get('reviewer_name', ''),
+            key="reviewer_name"
+        )
+        reviewer_title = st.text_input(
+            "Title",
+            value=st.session_state.report_config.get('reviewer_title', 'Senior Engineer'),
+            key="reviewer_title"
+        )
+
+    with col3:
+        st.markdown("#### Approved By")
+        approver_name = st.text_input(
+            "Name",
+            value=st.session_state.report_config.get('approver_name', ''),
+            key="approver_name"
+        )
+        approver_title = st.text_input(
+            "Title",
+            value=st.session_state.report_config.get('approver_title', 'Technical Manager'),
+            key="approver_title"
+        )
+
+    # Additional report options
+    with st.expander("📝 Additional Report Options"):
+        include_financial = st.checkbox(
+            "Include Financial Impact Analysis",
+            value=True,
+            help="Include Section 7 financial analysis in the report"
+        )
+
+        include_charts = st.checkbox(
+            "Include Uncertainty Charts",
+            value=True,
+            help="Include bar charts, pie charts, and Pareto diagram"
+        )
+
+        include_equipment_details = st.checkbox(
+            "Include Detailed Equipment Information",
+            value=True,
+            help="Include complete simulator and reference device specifications"
+        )
+
+        comments = st.text_area(
+            "Additional Comments/Notes",
+            value=st.session_state.report_config.get('comments', ''),
+            help="Any additional information to include in the report",
+            height=100
+        )
+
+    # Update session state with all report config
+    st.session_state.report_config.update({
+        'company_name': company_name,
+        'lab_address': lab_address,
+        'lab_accreditation': lab_accreditation,
+        'document_format': document_format,
+        'report_number': report_number,
+        'client_name': client_name,
+        'test_date': test_date.strftime('%Y-%m-%d'),
+        'report_date': report_date.strftime('%Y-%m-%d'),
+        'preparer_name': preparer_name,
+        'preparer_title': preparer_title,
+        'reviewer_name': reviewer_name,
+        'reviewer_title': reviewer_title,
+        'approver_name': approver_name,
+        'approver_title': approver_title,
+        'include_financial': include_financial,
+        'include_charts': include_charts,
+        'include_equipment_details': include_equipment_details,
+        'comments': comments
+    })
+
+    # Report generation section
+    st.markdown("---")
+    st.markdown("### 📥 Generate Reports")
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+        st.markdown("#### PDF Report")
+        st.markdown("ISO 17025 compliant PDF report with:")
+        st.markdown("""
+        - Module and equipment information
+        - Measurement results with uncertainty
+        - Detailed uncertainty budget
+        - Signature section
+        - Professional formatting
+        """)
+
+        if st.button("📄 Generate PDF Report", type="primary", use_container_width=True):
+            try:
+                with st.spinner("Generating PDF report..."):
+                    # Create report generator
+                    generator = ISO17025ReportGenerator(
+                        company_name=company_name,
+                        document_format=document_format,
+                        lab_address=lab_address,
+                        lab_accreditation=lab_accreditation,
+                        lab_logo_path=logo_path
+                    )
+
+                    # Generate PDF
+                    pdf_bytes = generator.generate_pdf_report(
+                        uncertainty_result=st.session_state.calculation_results,
+                        module_config=st.session_state.module_config or {},
+                        simulator_config=st.session_state.simulator_config or {},
+                        reference_config=st.session_state.reference_config or {},
+                        measurement_data=st.session_state.measurement_data or {},
+                        report_config=st.session_state.report_config
+                    )
+
+                    st.success("✅ PDF report generated successfully!")
+
+                    # Download button
+                    st.download_button(
+                        label="⬇️ Download PDF Report",
+                        data=pdf_bytes,
+                        file_name=f"PV_Uncertainty_Report_{report_number}.pdf",
+                        mime="application/pdf",
+                        use_container_width=True
+                    )
+
+            except Exception as e:
+                st.error(f"❌ Error generating PDF report: {str(e)}")
+                st.exception(e)
+
+    with col2:
+        st.markdown("#### Excel Report")
+        st.markdown("Comprehensive Excel workbook with:")
+        st.markdown("""
+        - Summary sheet with key results
+        - Detailed uncertainty budget
+        - Equipment specifications
+        - Financial analysis (if included)
+        - Easy to customize
+        """)
+
+        if st.button("📊 Generate Excel Report", type="primary", use_container_width=True):
+            try:
+                with st.spinner("Generating Excel report..."):
+                    # Create report generator
+                    generator = ISO17025ReportGenerator(
+                        company_name=company_name,
+                        document_format=document_format,
+                        lab_address=lab_address,
+                        lab_accreditation=lab_accreditation,
+                        lab_logo_path=logo_path
+                    )
+
+                    # Generate Excel
+                    excel_bytes = generator.generate_excel_report(
+                        uncertainty_result=st.session_state.calculation_results,
+                        module_config=st.session_state.module_config or {},
+                        simulator_config=st.session_state.simulator_config or {},
+                        reference_config=st.session_state.reference_config or {},
+                        measurement_data=st.session_state.measurement_data or {},
+                        report_config=st.session_state.report_config
+                    )
+
+                    st.success("✅ Excel report generated successfully!")
+
+                    # Download button
+                    st.download_button(
+                        label="⬇️ Download Excel Report",
+                        data=excel_bytes,
+                        file_name=f"PV_Uncertainty_Report_{report_number}.xlsx",
+                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                        use_container_width=True
+                    )
+
+            except Exception as e:
+                st.error(f"❌ Error generating Excel report: {str(e)}")
+                st.exception(e)
+
+    # Preview section
+    st.markdown("---")
+    st.markdown("### 👁️ Report Preview")
+
+    with st.expander("Preview Report Content", expanded=False):
+        st.markdown("#### Report Header")
+        st.json({
+            "Laboratory": company_name,
+            "Report Number": report_number,
+            "Client": client_name,
+            "Test Date": test_date.strftime('%Y-%m-%d'),
+            "Report Date": report_date.strftime('%Y-%m-%d')
+        })
+
+        if st.session_state.module_config:
+            st.markdown("#### Module Configuration")
+            st.json(st.session_state.module_config)
+
+        if st.session_state.calculation_results:
+            st.markdown("#### Key Results")
+            result = st.session_state.calculation_results
+            st.json({
+                "Pmax": f"{result['pmax_measured']:.2f} W",
+                "Uncertainty (k=2)": f"±{result['expanded_uncertainty_k2']:.2f}%",
+                "Absolute Uncertainty": f"±{result['pmax_uncertainty_absolute']:.2f} W",
+                "95% CI": f"[{result['confidence_interval_95'][0]:.2f}, {result['confidence_interval_95'][1]:.2f}] W"
+            })
+
+
 def main():
     """Main application function."""
 
@@ -1728,10 +2047,7 @@ def main():
         section_7_financial_impact()
 
     with tabs[7]:
-        st.markdown('<div class="section-header">8️⃣ Section 8: Professional Reporting</div>',
-                    unsafe_allow_html=True)
-        st.info("Professional ISO 17025 reporting feature - Coming in next update")
-        st.markdown("This section will include PDF and Excel report generation with company logo, signatures, and document control.")
+        section_8_professional_reporting()
 
 
 if __name__ == "__main__":

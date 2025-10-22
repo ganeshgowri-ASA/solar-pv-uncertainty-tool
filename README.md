@@ -32,12 +32,14 @@ This tool implements **GUM (JCGM 100:2008)** methodology, **ISO 17025** complian
 - **Multi-Currency Support**: USD, EUR, INR, CNY, JPY, GBP, CHF, AUD
 - **Technology-Specific Benchmarks**: 2024 pricing data
 
-#### **Professional Reporting (ISO 17025)**
+#### **Professional Reporting (ISO 17025)** ✅ FULLY INTEGRATED
 - PDF reports with company logo and signatures
-- Excel workbooks with multiple sheets
+- Excel workbooks with multiple sheets (Summary, Budget, Equipment)
 - Document control (format numbers, record references)
 - Preparer/Reviewer/Approver signature fields
 - Compliant with ISO 17025 format requirements
+- One-click generation and download
+- Customizable report options and content
 
 #### **File Upload & Auto-Extraction**
 - **PDF**: Calibration certificates, test reports, datasheets

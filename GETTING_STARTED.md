@@ -123,9 +123,43 @@ Relative Uncertainty: 2.27%
 2. Energy price (e.g., $0.10/kWh)
 3. Get NPV/ROI with uncertainty
 
-### Step 8: Generate Report (Tab 8)
+### Step 8: Generate Professional Reports (Tab 8)
 
-**Coming Soon:** Professional ISO 17025 compliant PDF and Excel reports
+**Now Available!** Professional ISO 17025 compliant PDF and Excel reports
+
+1. **Configure Report Details:**
+   - Enter laboratory name and address
+   - Add accreditation number (if applicable)
+   - Specify report and document numbers
+   - Enter client name
+   - Set test and report dates
+
+2. **Upload Company Logo (Optional):**
+   - Upload your lab's logo (PNG/JPG)
+   - Recommended size: 150x50 pixels
+
+3. **Enter Signatures:**
+   - Prepared by: Test Engineer name and title
+   - Reviewed by: Senior Engineer name and title
+   - Approved by: Technical Manager name and title
+
+4. **Configure Report Options:**
+   - Choose to include financial analysis
+   - Include/exclude uncertainty charts
+   - Include/exclude detailed equipment info
+   - Add additional comments or notes
+
+5. **Generate Reports:**
+   - Click "Generate PDF Report" for ISO 17025 PDF
+   - Click "Generate Excel Report" for detailed Excel workbook
+   - Download reports directly from the interface
+
+**Example:**
+- Laboratory: "Solar Testing Lab Inc."
+- Report Number: "UNC-20251022-1430"
+- Client: "Solar Module Manufacturing Co."
+- Prepared by: "John Doe, Test Engineer"
+- → Generate both PDF and Excel reports with one click!
 
 ---
 
