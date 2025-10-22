@@ -1,29 +1,58 @@
-# ☀️ PV Measurement Uncertainty Tool
+# ☀️ PV Measurement Uncertainty Tool - Professional Edition
 
-A professional-grade tool for calculating measurement uncertainty in photovoltaic (PV) systems using internationally recognized standards.
+A **comprehensive, production-ready platform** for calculating measurement uncertainty in photovoltaic (PV) IV measurements using internationally recognized standards. Designed for third-party testing laboratories, manufacturers, researchers, and financial stakeholders.
 
-## Overview
+## 🎯 Overview
 
-This tool implements **GUM (Guide to the Expression of Uncertainty in Measurement)** methodology and **Monte Carlo simulation** for comprehensive uncertainty analysis of PV measurements. It's designed for solar energy professionals, researchers, and engineers who need to quantify and report measurement uncertainties in accordance with international standards.
+This tool implements **GUM (JCGM 100:2008)** methodology, **ISO 17025** compliant reporting, and **financial impact analysis** for comprehensive uncertainty quantification in solar PV measurements. It features an extensive equipment database, automated data extraction from certificates, and professional report generation.
 
-### Key Features
+### ⭐ Key Features
 
-- **GUM Methodology**: Calculate combined uncertainty following JCGM 100:2008
-- **Monte Carlo Simulation**: Uncertainty propagation following JCGM 101:2008 (GUM Supplement 1)
-- **PV-Specific Calculations**:
-  - Power measurement uncertainty
-  - Performance Ratio (PR) uncertainty
-  - Custom uncertainty budgets
-- **Interactive Visualizations**:
-  - Uncertainty budget charts
-  - Distribution histograms
-  - Sensitivity analysis
-  - Confidence interval plots
-- **Batch Processing**: Analyze time-series data from CSV files
-- **Export Capabilities**: Download results in CSV and TXT formats
-- **Streamlit/Snowflake Ready**: Optimized for cloud deployment
+#### **Comprehensive Uncertainty Analysis**
+- **7 Main Uncertainty Categories** with 40+ individual factors:
+  - Reference Device (calibration, drift, positioning)
+  - Sun Simulator (uniformity, temporal, spectral mismatch)
+  - Temperature Measurement & Correction (IEC 60891)
+  - I-V Measurement (voltage, current, curve fitting)
+  - Module Characteristics (hysteresis, stabilization)
+  - Environmental Conditions
+  - Measurement Procedure (R&R, ILC/Round Robin)
 
-## Quick Start
+#### **Industry Equipment Database**
+- **8 PV Technologies**: PERC, TOPCon, HJT, Perovskite, Perovskite-Silicon Tandem, CIGS, CdTe, Custom
+- **13+ Sun Simulators**: Spire, Eternalsun, Wavelabs Avalon, Pasan, ReRa, Lumartix, Atlas, and more
+- **12+ Reference Labs**: NREL, PTB, AIST, NIMS, Fraunhofer ISE, TÜV, SUPSI, PI Berlin, DNV, RETC, and more
+- **5 Standard Spectra**: AM1.5G, AM1.5D, AM1.0, AM0, Custom
+
+#### **Financial Impact Analysis**
+- **Multi-Scenario Analysis**:
+  - Fresh module pricing impact
+  - Warranty/insurance claim assessment
+  - Project NPV/ROI with uncertainty propagation
+- **Multi-Currency Support**: USD, EUR, INR, CNY, JPY, GBP, CHF, AUD
+- **Technology-Specific Benchmarks**: 2024 pricing data
+
+#### **Professional Reporting (ISO 17025)**
+- PDF reports with company logo and signatures
+- Excel workbooks with multiple sheets
+- Document control (format numbers, record references)
+- Preparer/Reviewer/Approver signature fields
+- Compliant with ISO 17025 format requirements
+
+#### **File Upload & Auto-Extraction**
+- **PDF**: Calibration certificates, test reports, datasheets
+- **Excel**: I-V curve data, summary results, repeatability data
+- **PVsyst .PAN Files**: Complete module parameter extraction
+- **Automatic Data Validation**: I-V ratio checks, fill factor calculation
+
+#### **Interactive Visualizations**
+- Fishbone uncertainty diagram
+- Uncertainty budget bar charts
+- Contribution pie charts
+- Pareto cumulative analysis
+- Financial impact visualizations
+
+## 🚀 Quick Start
 
 ### Installation
 
@@ -38,12 +67,19 @@ This tool implements **GUM (Guide to the Expression of Uncertainty in Measuremen
    pip install -r requirements.txt
    ```
 
-3. Run the application:
+3. **Run the Professional Edition:**
+   ```bash
+   streamlit run streamlit_app_pro.py
+   ```
+
+   Or the original simplified version:
    ```bash
    streamlit run streamlit_app.py
    ```
 
 The app will open in your browser at `http://localhost:8501`
+
+**📖 First time user?** See **[GETTING_STARTED.md](GETTING_STARTED.md)** for a 5-minute tutorial!
 
 ### Using with Snowflake
 
