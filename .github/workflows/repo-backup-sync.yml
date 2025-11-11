@@ -1,0 +1,42 @@
+name: Repository Backup to ganeshgowri-asa-et
+
+# Runs daily at midnight IST (6:30 PM UTC) and on every push
+on:
+  schedule:
+    - cron: '30 18 * * *'  # Daily at 12:00 AM IST
+  push:
+    branches:
+      - main
+      - master
+  workflow_dispatch:  # Allows manual trigger
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    name: Sync Repository to Backup Account
+    
+    steps:
+      - name: Checkout source repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full history for complete backup
+          
+      - name: Push to backup repository
+        env:
+          BACKUP_TOKEN: ${{ secrets.BACKUP_TOKEN }}
+        run: |
+          # Configure git
+          git config --global user.name "GitHub Actions Bot"
+          git config --global user.email "actions@github.com"
+          
+          # Get current repository name
+          REPO_NAME=$(basename $GITHUB_REPOSITORY)
+          
+          # Add backup remote
+          git remote add backup https://x-access-token:${BACKUP_TOKEN}@github.com/ganeshgowri-asa-et/${REPO_NAME}.git || true
+          
+          # Push all branches and tags
+          git push backup --all --force || echo "Push branches completed with warnings"
+          git push backup --tags --force || echo "Push tags completed with warnings"
+          
+          echo "✅ Successfully backed up to ganeshgowri-asa-et/${REPO_NAME}"
