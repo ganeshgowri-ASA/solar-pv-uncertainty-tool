@@ -214,18 +214,124 @@ The tool automatically calculates:
 - Percentage contributions
 - Correlation effects (when specified)
 
-## Module Structure
+## Architecture Overview
+
+The PV Measurement Uncertainty Tool is a modular, production-ready platform built with Streamlit. The architecture follows a clean separation of concerns:
+
+### System Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                           PRESENTATION LAYER                                 │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │                     streamlit_app.py                                 │   │
+│  │  - 8 Main Sections (Module, Simulator, Reference, Data, Uncertainty,│   │
+│  │    Results, Financial, Reporting)                                    │   │
+│  │  - Session State Management                                          │   │
+│  │  - Interactive UI with Custom CSS                                    │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                      │
+                                      ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                           BUSINESS LOGIC LAYER                               │
+│  ┌──────────────────────┐  ┌──────────────────────┐  ┌──────────────────┐  │
+│  │ pv_uncertainty_      │  │ uncertainty_         │  │ monte_carlo.py   │  │
+│  │ enhanced.py          │  │ calculator.py        │  │                  │  │
+│  │ - PVUncertaintyBudget│  │ - Basic GUM methods  │  │ - Monte Carlo    │  │
+│  │ - 7-Category Fishbone│  │ - Power uncertainty  │  │   simulations    │  │
+│  │ - STC Calculations   │  │ - PR uncertainty     │  │ - Distribution   │  │
+│  └──────────────────────┘  └──────────────────────┘  └──────────────────┘  │
+│  ┌──────────────────────┐  ┌──────────────────────┐  ┌──────────────────┐  │
+│  │ financial_impact.py  │  │ report_generator.py  │  │ visualizations.py│  │
+│  │ - Module pricing     │  │ - ISO 17025 PDF      │  │ - Plotly charts  │  │
+│  │ - Warranty claims    │  │ - Excel workbooks    │  │ - Fishbone       │  │
+│  │ - Project NPV/ROI    │  │ - Signature sections │  │ - Pareto/Pie     │  │
+│  └──────────────────────┘  └──────────────────────┘  └──────────────────┘  │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                      │
+                                      ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                             DATA LAYER                                       │
+│  ┌──────────────────────┐  ┌──────────────────────┐  ┌──────────────────┐  │
+│  │ config_data.py       │  │ file_utilities.py    │  │ data_handler.py  │  │
+│  │ - PV_TECHNOLOGIES    │  │ - PDFExtractor       │  │ - DataValidator  │  │
+│  │ - SUN_SIMULATORS     │  │ - ExcelExtractor     │  │ - CSV processing │  │
+│  │ - REFERENCE_LABS     │  │ - PVsystPANParser    │  │ - I/O operations │  │
+│  │ - CURRENCIES         │  │ - DatasheetExtractor │  │                  │  │
+│  └──────────────────────┘  └──────────────────────┘  └──────────────────┘  │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### Module Structure
 
 ```
 solar-pv-uncertainty-tool/
-├── streamlit_app.py           # Main Streamlit application
-├── uncertainty_calculator.py  # GUM methodology implementation
-├── monte_carlo.py             # Monte Carlo simulation engine
-├── visualizations.py          # Plotly visualization functions
-├── data_handler.py            # Data validation and I/O
-├── requirements.txt           # Python dependencies
-└── README.md                  # This file
+│
+├── streamlit_app.py              # Main Professional Edition application
+├── streamlit_app_legacy.py       # Legacy simplified version
+│
+├── CORE CALCULATION MODULES
+├── uncertainty_calculator.py     # Basic GUM methodology (PVUncertaintyCalculator)
+├── pv_uncertainty_enhanced.py    # Enhanced 7-category uncertainty budget
+├── monte_carlo.py                # Monte Carlo simulation engine
+│
+├── DATA & CONFIGURATION
+├── config_data.py                # Equipment database & reference data
+│                                 # - 8 PV technologies (PERC, TOPCon, HJT, etc.)
+│                                 # - 13+ sun simulators (Spire, Wavelabs, etc.)
+│                                 # - 12+ reference labs (NREL, PTB, etc.)
+│                                 # - 8 currencies with exchange rates
+│                                 # - 7 uncertainty category definitions
+├── data_handler.py               # Data validation and I/O utilities
+├── file_utilities.py             # File extraction (PDF, Excel, PVsyst .PAN)
+│
+├── OUTPUT GENERATION
+├── report_generator.py           # ISO 17025 compliant PDF/Excel reports
+├── visualizations.py             # Plotly visualizations
+├── financial_impact.py           # Financial impact analysis
+│
+├── DOCUMENTATION
+├── README.md                     # This documentation
+├── GETTING_STARTED.md            # Quick start guide
+├── DEVELOPMENT_ROADMAP.md        # Future development plans
+├── CHANGELOG.md                  # Version history
+│
+├── CONFIGURATION FILES
+├── requirements.txt              # Python dependencies
+├── .devcontainer/                # DevContainer configuration
+└── .github/workflows/            # GitHub Actions workflows
 ```
+
+### Key Components
+
+#### 1. Uncertainty Calculation Engine (`pv_uncertainty_enhanced.py`)
+The core calculation engine implements GUM (JCGM 100:2008) methodology with a comprehensive 7-category fishbone structure:
+
+| Category | Description | Key Factors |
+|----------|-------------|-------------|
+| 1. Reference Device | Calibration chain | Calibration, drift, positioning |
+| 2. Sun Simulator | Equipment performance | Uniformity, temporal stability, spectral match |
+| 3. Temperature | Thermal effects | Sensor calibration, uniformity, coefficients |
+| 4. I-V Measurement | Electrical measurement | Voltage, current, curve fitting |
+| 5. Module Behavior | Device characteristics | Hysteresis, stabilization |
+| 6. Environment | Ambient conditions | Temperature, humidity, pressure |
+| 7. Procedure | Measurement process | Repeatability, reproducibility (R&R, ILC) |
+
+#### 2. Equipment Database (`config_data.py`)
+Pre-configured database with typical specifications for common PV testing equipment, enabling quick setup while allowing customization.
+
+#### 3. Financial Impact Analysis (`financial_impact.py`)
+Three analysis modes:
+- **Fresh Module Pricing**: Uncertainty impact on module sales price
+- **Warranty Claims**: Statistical analysis for warranty threshold assessment
+- **Project NPV/ROI**: Uncertainty propagation through project financials
+
+#### 4. Report Generator (`report_generator.py`)
+ISO 17025 compliant output with:
+- PDF reports with document control, signatures, and professional formatting
+- Excel workbooks with multi-sheet analysis
+- Customizable headers, logos, and metadata
 
 ## API Reference
 
@@ -340,14 +446,25 @@ For issues, questions, or suggestions:
 
 ## Version History
 
-**v1.0.0** (Current)
-- Initial release
-- GUM methodology implementation
-- Monte Carlo simulation
+See [CHANGELOG.md](CHANGELOG.md) for detailed version history.
+
+**v1.0-stable-bugfix** (Current - December 2025)
+- Fixed critical KeyError bugs in uncertainty calculation and reporting
+- Migrated to Professional Edition UI
+- Comprehensive 7-category uncertainty budget (40+ individual factors)
+- ISO 17025 compliant PDF/Excel report generation
+- Financial impact analysis (fresh module, warranty, project NPV)
+- Equipment database (13+ simulators, 12+ reference labs, 8 technologies)
+- File extraction from PDFs, Excel, PVsyst .PAN files
+- Multi-currency support (USD, EUR, INR, CNY, JPY, GBP, CHF, AUD)
+
+**v1.0.0** (Initial Release)
+- Initial release with basic GUM methodology
+- Monte Carlo simulation engine
 - Five analysis modes
 - Interactive visualizations
-- Batch processing
-- CSV export
+- Batch processing capabilities
+- CSV export functionality
 - Streamlit/Snowflake compatible
 
 ## Acknowledgments
