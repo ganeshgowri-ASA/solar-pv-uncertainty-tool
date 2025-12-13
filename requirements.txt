@@ -19,3 +19,7 @@ Pillow>=10.0.0
 # Reporting
 reportlab>=4.0.0
 xlsxwriter>=3.1.0
+
+# Database (Railway PostgreSQL)
+sqlalchemy>=2.0.0
+psycopg2-binary>=2.9.0

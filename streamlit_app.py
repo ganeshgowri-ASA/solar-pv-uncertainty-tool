@@ -33,6 +33,11 @@ from file_utilities import (
     DatasheetExtractor, PVsystPANParser
 )
 from report_generator import ISO17025ReportGenerator
+from repeatability import (
+    RepeatabilityAnalyzer, RepeatabilityFileParser, RepeatabilityDatabaseHandler,
+    IVMeasurement, RepeatabilityResult, validate_file_format,
+    calculate_repeatability_coefficient
+)
 
 # Page configuration
 st.set_page_config(
@@ -156,6 +161,15 @@ def initialize_session_state():
         st.session_state.financial_results = None
     if 'report_config' not in st.session_state:
         st.session_state.report_config = {}
+    # Repeatability analysis state
+    if 'repeatability_analyzer' not in st.session_state:
+        st.session_state.repeatability_analyzer = None
+    if 'repeatability_result' not in st.session_state:
+        st.session_state.repeatability_result = None
+    if 'repeatability_files' not in st.session_state:
+        st.session_state.repeatability_files = []
+    if 'type_a_uncertainty' not in st.session_state:
+        st.session_state.type_a_uncertainty = None
 
 
 def show_help(help_text: str):
@@ -731,6 +745,351 @@ def section_4_measurement_data():
     }
 
 
+def section_4b_repeatability_analysis():
+    """Section 4b: Repeatability Analysis - Type A Uncertainty"""
+    st.markdown('<div class="section-header">4b. Repeatability Analysis (Type A Uncertainty)</div>',
+                unsafe_allow_html=True)
+
+    st.info("""
+    **Repeatability Analysis** determines the Type A uncertainty component from repeated measurements.
+    Upload at least **10 measurement files** from repeated tests on the same module under the same conditions.
+    This follows GUM (JCGM 100:2008) methodology for evaluating uncertainty by statistical analysis.
+    """)
+
+    # Database configuration (optional)
+    with st.expander("Database Configuration (Optional)", expanded=False):
+        st.markdown("#### Railway PostgreSQL Connection")
+        db_url = st.text_input(
+            "Database URL",
+            type="password",
+            help="Enter your Railway PostgreSQL URL (e.g., postgresql://user:pass@host:port/db)",
+            key="db_url"
+        )
+        if db_url:
+            st.session_state['database_url'] = db_url
+            st.success("Database URL configured")
+
+    # File Upload Section
+    st.markdown("### 4b.1 Upload Measurement Files")
+
+    col1, col2 = st.columns([2, 1])
+
+    with col1:
+        uploaded_files = st.file_uploader(
+            "Upload IV Measurement Files (minimum 10 files)",
+            type=['csv', 'xlsx', 'xls'],
+            accept_multiple_files=True,
+            help="Upload CSV or Excel files containing IV curve data from repeated measurements",
+            key="repeatability_files_uploader"
+        )
+
+    with col2:
+        st.markdown("#### Requirements")
+        st.markdown("""
+        - **Minimum 10 files** required
+        - CSV or Excel format
+        - Each file = 1 measurement
+        - Same module, same conditions
+        - Contains: Isc, Voc, Pmax, Vmp, Imp
+        """)
+
+    # Process uploaded files
+    if uploaded_files:
+        n_files = len(uploaded_files)
+        st.info(f"**{n_files} files uploaded** {'(minimum requirement met)' if n_files >= 10 else f'(need {10 - n_files} more files)'}")
+
+        # File validation status
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            st.metric("Files Uploaded", n_files)
+        with col2:
+            status_color = "green" if n_files >= 10 else "orange"
+            st.metric("Status", "Ready" if n_files >= 10 else "Need More Files")
+        with col3:
+            st.metric("Minimum Required", "10 files")
+
+        # Show uploaded file list
+        with st.expander("Uploaded Files", expanded=True):
+            file_list = []
+            for i, f in enumerate(uploaded_files, 1):
+                is_valid, error = validate_file_format(f, f.name)
+                f.seek(0)  # Reset file position
+                file_list.append({
+                    '#': i,
+                    'Filename': f.name,
+                    'Size (KB)': f"{f.size / 1024:.1f}" if hasattr(f, 'size') else "N/A",
+                    'Valid': "Yes" if is_valid else f"No: {error}"
+                })
+            st.dataframe(pd.DataFrame(file_list), use_container_width=True, hide_index=True)
+
+        # Analyze button
+        st.markdown("---")
+        if st.button("Analyze Repeatability", type="primary", use_container_width=True,
+                     disabled=(n_files < 10)):
+
+            with st.spinner("Parsing files and calculating statistics..."):
+                # Create analyzer
+                analyzer = RepeatabilityAnalyzer(minimum_files=10)
+
+                # Parse all files
+                success_count = 0
+                for f in uploaded_files:
+                    f.seek(0)
+                    measurement = RepeatabilityFileParser.parse_file(f, f.name)
+                    if measurement:
+                        analyzer.add_measurement(measurement)
+                        success_count += 1
+
+                # Perform analysis
+                result = analyzer.analyze(
+                    module_id=st.session_state.module_config.get('technology', 'Unknown')
+                )
+
+                # Store in session state
+                st.session_state.repeatability_analyzer = analyzer
+                st.session_state.repeatability_result = result
+
+                # Store Type A uncertainty for use in main calculation
+                if result.type_a_uncertainty and 'pmax' in result.type_a_uncertainty:
+                    st.session_state.type_a_uncertainty = result.type_a_uncertainty['pmax']
+
+                st.success(f"Analysis complete! {success_count}/{n_files} files processed successfully.")
+
+                # Save to database if configured
+                db_url = st.session_state.get('database_url')
+                if db_url:
+                    try:
+                        db_handler = RepeatabilityDatabaseHandler(db_url)
+                        if db_handler.connect():
+                            db_handler.create_tables()
+                            # Save measurements
+                            for m in analyzer.measurements:
+                                db_handler.save_measurement(m, result.analysis_id)
+                            # Save result
+                            db_handler.save_repeatability_result(result)
+                            db_handler.close()
+                            st.success("Results saved to database")
+                    except Exception as e:
+                        st.warning(f"Database save failed: {e}")
+
+    # Display Results
+    if st.session_state.repeatability_result:
+        result = st.session_state.repeatability_result
+        analyzer = st.session_state.repeatability_analyzer
+
+        st.markdown("---")
+        st.markdown("### 4b.2 Analysis Results")
+
+        # Validation status
+        if result.validation_passed:
+            st.success(f"Repeatability analysis PASSED with {result.valid_measurements} valid measurements")
+        else:
+            st.error("Repeatability analysis FAILED - see errors below")
+            for err in result.errors:
+                st.error(err)
+
+        # Warnings
+        for warn in result.warnings:
+            st.warning(warn)
+
+        # Key statistics
+        if 'pmax' in result.statistics:
+            pmax_stats = result.statistics['pmax']
+
+            st.markdown("#### Key Pmax Statistics")
+
+            col1, col2, col3, col4 = st.columns(4)
+            with col1:
+                st.metric("Mean Pmax", f"{pmax_stats.mean:.2f} W")
+            with col2:
+                st.metric("Std Deviation", f"{pmax_stats.std_dev:.4f} W")
+            with col3:
+                st.metric("CV (%)", f"{pmax_stats.cv_percent:.3f}%")
+            with col4:
+                st.metric(
+                    "Type A Uncertainty",
+                    f"{pmax_stats.relative_uncertainty_percent:.4f}%",
+                    help="u_A = s / sqrt(n)"
+                )
+
+            # Additional metrics
+            col1, col2, col3, col4 = st.columns(4)
+            with col1:
+                st.metric("N Measurements", pmax_stats.n_measurements)
+            with col2:
+                st.metric("Min Pmax", f"{pmax_stats.min_value:.2f} W")
+            with col3:
+                st.metric("Max Pmax", f"{pmax_stats.max_value:.2f} W")
+            with col4:
+                st.metric("Range", f"{pmax_stats.range_value:.2f} W")
+
+            # Repeatability coefficient
+            r_coeff = calculate_repeatability_coefficient(
+                pmax_stats.std_dev, pmax_stats.mean
+            )
+            st.info(f"**Repeatability Coefficient (r):** {r_coeff:.3f}% (ISO 5725-2, 95% confidence)")
+
+        # Full statistics table
+        st.markdown("#### Complete Statistics Table")
+        stats_df = analyzer.get_statistics_dataframe()
+        st.dataframe(stats_df, use_container_width=True, hide_index=True)
+
+        # Individual measurements table
+        st.markdown("#### Individual Measurements")
+        measurements_df = analyzer.to_dataframe()
+        st.dataframe(measurements_df, use_container_width=True, hide_index=True)
+
+        # Download measurements data
+        csv_data = measurements_df.to_csv(index=False)
+        st.download_button(
+            label="Download Measurements (CSV)",
+            data=csv_data,
+            file_name=f"repeatability_data_{result.analysis_id}.csv",
+            mime="text/csv"
+        )
+
+        # Visualizations
+        st.markdown("### 4b.3 Visualizations")
+
+        tab1, tab2, tab3 = st.tabs(["Box Plot", "Scatter Plot", "Histogram"])
+
+        with tab1:
+            if 'pmax' in result.statistics:
+                values = result.statistics['pmax'].values
+
+                fig = go.Figure()
+                fig.add_trace(go.Box(
+                    y=values,
+                    name='Pmax',
+                    boxpoints='all',
+                    jitter=0.3,
+                    pointpos=-1.8,
+                    marker=dict(color='#3b82f6'),
+                    line=dict(color='#1e40af')
+                ))
+
+                fig.update_layout(
+                    title="Pmax Distribution - Box Plot",
+                    yaxis_title="Pmax (W)",
+                    height=400,
+                    showlegend=False
+                )
+                st.plotly_chart(fig, use_container_width=True)
+
+        with tab2:
+            if 'pmax' in result.statistics:
+                values = result.statistics['pmax'].values
+                mean_val = result.statistics['pmax'].mean
+
+                fig = go.Figure()
+
+                # Scatter of individual measurements
+                fig.add_trace(go.Scatter(
+                    x=list(range(1, len(values) + 1)),
+                    y=values,
+                    mode='markers+lines',
+                    name='Measurements',
+                    marker=dict(size=10, color='#3b82f6'),
+                    line=dict(color='#93c5fd', width=1)
+                ))
+
+                # Mean line
+                fig.add_hline(
+                    y=mean_val,
+                    line_dash="dash",
+                    line_color="green",
+                    annotation_text=f"Mean: {mean_val:.2f} W"
+                )
+
+                # +/- std dev bands
+                std_dev = result.statistics['pmax'].std_dev
+                fig.add_hrect(
+                    y0=mean_val - std_dev,
+                    y1=mean_val + std_dev,
+                    fillcolor="rgba(0, 255, 0, 0.1)",
+                    line_width=0,
+                    annotation_text="+/- 1 std dev"
+                )
+
+                fig.update_layout(
+                    title="Pmax Measurements Scatter Plot",
+                    xaxis_title="Measurement Number",
+                    yaxis_title="Pmax (W)",
+                    height=400
+                )
+                st.plotly_chart(fig, use_container_width=True)
+
+        with tab3:
+            if 'pmax' in result.statistics:
+                values = result.statistics['pmax'].values
+
+                fig = go.Figure()
+                fig.add_trace(go.Histogram(
+                    x=values,
+                    nbinsx=min(len(values), 15),
+                    marker_color='#3b82f6',
+                    opacity=0.75
+                ))
+
+                fig.update_layout(
+                    title="Pmax Distribution - Histogram",
+                    xaxis_title="Pmax (W)",
+                    yaxis_title="Frequency",
+                    height=400,
+                    showlegend=False
+                )
+                st.plotly_chart(fig, use_container_width=True)
+
+        # Outliers detection
+        if result.outliers_detected:
+            st.markdown("### Outliers Detected")
+            st.warning(f"{len(result.outliers_detected)} potential outlier(s) detected using IQR method")
+
+            outlier_df = pd.DataFrame(result.outliers_detected)
+            st.dataframe(outlier_df, use_container_width=True, hide_index=True)
+
+        # Type A Uncertainty Summary
+        st.markdown("---")
+        st.markdown("### 4b.4 Type A Uncertainty Summary")
+
+        if result.type_a_uncertainty:
+            st.success(f"""
+            **Type A Uncertainty (from repeatability):**
+
+            - **u_A (Pmax) = {result.type_a_uncertainty.get('pmax', 0):.4f}%**
+
+            This value will be automatically used in Section 5 (Uncertainty Analysis) as the
+            repeatability component (7.1) of the uncertainty budget.
+
+            *Formula: u_A = s / sqrt(n) where s = sample standard deviation, n = number of measurements*
+            """)
+
+            # Save to session state for use in Section 5
+            st.session_state.type_a_uncertainty = result.type_a_uncertainty.get('pmax', 0)
+
+    # Help section
+    show_help("""
+    **Repeatability Analysis** evaluates Type A uncertainty by statistical analysis of
+    repeated measurements under the same conditions.
+
+    **Requirements:**
+    - Minimum 10 measurement files (more is better for statistical significance)
+    - Each file should contain IV curve data or summary parameters (Isc, Voc, Pmax, Vmp, Imp)
+    - Files should be from measurements on the same module under identical conditions
+
+    **Calculations:**
+    - **Mean:** Average of all measurements
+    - **Standard Deviation:** Sample standard deviation (n-1 degrees of freedom)
+    - **CV%:** Coefficient of variation = (std dev / mean) x 100
+    - **Type A Uncertainty:** u_A = s / sqrt(n) per GUM methodology
+    - **Repeatability Coefficient (r):** 2.8 x s (95% confidence per ISO 5725-2)
+
+    **Data Storage:**
+    - Configure Railway PostgreSQL URL to automatically store results in the database
+    - Results are stored in `measurement_files` and `repeatability_results` tables
+    """)
+
+
 def create_fishbone_diagram_plotly(budget_data: Dict) -> go.Figure:
     """Create a simplified fishbone diagram using Plotly."""
 
@@ -988,13 +1347,21 @@ def section_5_uncertainty_factors():
                 key="unc_hysteresis"
             )
         with col2:
+            # Use Type A uncertainty from repeatability analysis if available
+            type_a_default = st.session_state.get('type_a_uncertainty', 0.5)
+            type_a_from_analysis = st.session_state.get('type_a_uncertainty') is not None
+
+            if type_a_from_analysis:
+                st.info(f"Type A uncertainty from repeatability analysis: {type_a_default:.4f}%")
+
             uncertainty_values['repeatability'] = st.number_input(
-                "7.1 Repeatability (%)",
+                "7.1 Repeatability (Type A) (%)",
                 min_value=0.0,
                 max_value=5.0,
-                value=0.5,
-                step=0.1,
-                key="unc_repeat"
+                value=float(type_a_default) if type_a_default else 0.5,
+                step=0.01,
+                key="unc_repeat",
+                help="From Section 4b repeatability analysis (u_A = s/sqrt(n))" if type_a_from_analysis else "Enter repeatability from repeated measurements"
             )
         with col3:
             uncertainty_values['reproducibility'] = st.number_input(
@@ -1988,6 +2355,7 @@ def main():
         2️⃣ Sun Simulator
         3️⃣ Reference Device
         4️⃣ Measurement Data
+        4b. Repeatability (Type A)
         5️⃣ Uncertainty Analysis
         6️⃣ Results & Budget
         7️⃣ Financial Impact
@@ -2003,6 +2371,8 @@ def main():
             st.caption(f"**Simulator:** {st.session_state.simulator_config.get('model', 'N/A')}")
         if st.session_state.measurement_data:
             st.caption(f"**Pmax:** {st.session_state.measurement_data.get('pmax', 0):.2f} W")
+        if st.session_state.type_a_uncertainty:
+            st.caption(f"**Type A Unc:** {st.session_state.type_a_uncertainty:.4f}%")
         if st.session_state.calculation_results:
             st.caption(f"**Uncertainty:** ±{st.session_state.calculation_results.get('expanded_uncertainty_k2', 0):.2f}%")
 
@@ -2019,6 +2389,7 @@ def main():
         "2️⃣ Simulator",
         "3️⃣ Reference",
         "4️⃣ Data",
+        "4b Repeatability",
         "5️⃣ Uncertainty",
         "6️⃣ Results",
         "7️⃣ Financial",
@@ -2038,15 +2409,18 @@ def main():
         section_4_measurement_data()
 
     with tabs[4]:
-        section_5_uncertainty_factors()
+        section_4b_repeatability_analysis()
 
     with tabs[5]:
-        section_6_results()
+        section_5_uncertainty_factors()
 
     with tabs[6]:
-        section_7_financial_impact()
+        section_6_results()
 
     with tabs[7]:
+        section_7_financial_impact()
+
+    with tabs[8]:
         section_8_professional_reporting()
 
 
