@@ -33,6 +33,12 @@ from file_utilities import (
     DatasheetExtractor, PVsystPANParser
 )
 from report_generator import ISO17025ReportGenerator
+from spectral_mismatch import (
+    SpectralMismatchCalculator, SpectralDataParser, SpectralData,
+    AM15GSpectrum, WavelabsSimulatorPresets, TypicalSpectralResponse,
+    SpectralMismatchRecord, SpectralMismatchDB,
+    create_spectral_mismatch_uncertainty_factor
+)
 
 # Page configuration
 st.set_page_config(
@@ -156,6 +162,14 @@ def initialize_session_state():
         st.session_state.financial_results = None
     if 'report_config' not in st.session_state:
         st.session_state.report_config = {}
+    if 'spectral_mismatch_results' not in st.session_state:
+        st.session_state.spectral_mismatch_results = None
+    if 'spectral_data' not in st.session_state:
+        st.session_state.spectral_data = {
+            'reference_sr': None,
+            'test_sr': None,
+            'simulator_spectrum': None
+        }
 
 
 def show_help(help_text: str):
@@ -903,14 +917,224 @@ def section_5_uncertainty_factors():
                 key="unc_sim_temp"
             )
         with col3:
+            # Check if we have calculated M factor
+            default_spectral = 0.8
+            if st.session_state.spectral_mismatch_results:
+                m_unc = st.session_state.spectral_mismatch_results.get('relative_uncertainty_percent', 0.8)
+                default_spectral = m_unc
+
             uncertainty_values['spectral_mismatch'] = st.number_input(
                 "2.3 Spectral Mismatch (%)",
                 min_value=0.0,
                 max_value=5.0,
-                value=0.8,
+                value=default_spectral,
                 step=0.1,
                 key="unc_spectral"
             )
+
+        # Enhanced Spectral Mismatch Calculator
+        with st.expander("🔬 Advanced Spectral Mismatch Calculator (IEC 60904-7)", expanded=False):
+            st.markdown("""
+            Calculate precise spectral mismatch factor M using actual spectral data.
+            This replaces the simplified fixed value above with a calculated value.
+
+            **M Factor Formula:** M = [∫E_ref·SR_ref / ∫E_ref·SR_test] × [∫E_sim·SR_test / ∫E_sim·SR_ref]
+            """)
+
+            sm_col1, sm_col2 = st.columns(2)
+
+            with sm_col1:
+                st.markdown("##### Reference Device Spectral Response")
+                ref_sr_source = st.radio(
+                    "Reference SR Source",
+                    ["Use Typical (WPVS c-Si)", "Upload File"],
+                    key="ref_sr_source",
+                    horizontal=True
+                )
+
+                if ref_sr_source == "Upload File":
+                    ref_sr_file = st.file_uploader(
+                        "Upload Reference Device SR (CSV)",
+                        type=['csv', 'txt'],
+                        key="ref_sr_upload",
+                        help="CSV with columns: wavelength (nm), spectral_response (A/W)"
+                    )
+                    if ref_sr_file:
+                        try:
+                            ref_sr_data = SpectralDataParser.parse_csv(ref_sr_file.getvalue())
+                            st.session_state.spectral_data['reference_sr'] = ref_sr_data
+                            st.success(f"Loaded: {len(ref_sr_data.wavelength)} points, {ref_sr_data.wavelength_range[0]:.0f}-{ref_sr_data.wavelength_range[1]:.0f} nm")
+                        except Exception as e:
+                            st.error(f"Error parsing file: {e}")
+                else:
+                    st.session_state.spectral_data['reference_sr'] = TypicalSpectralResponse.get_csi_wpvs()
+                    st.info("Using typical WPVS c-Si reference cell SR")
+
+                st.markdown("##### Test Device Spectral Response")
+                test_sr_source = st.selectbox(
+                    "Test Device Technology",
+                    ["c-Si Mono", "HJT", "TOPCon", "Perovskite", "CdTe", "Upload Custom"],
+                    key="test_sr_source"
+                )
+
+                if test_sr_source == "Upload Custom":
+                    test_sr_file = st.file_uploader(
+                        "Upload Test Device SR (CSV)",
+                        type=['csv', 'txt'],
+                        key="test_sr_upload"
+                    )
+                    if test_sr_file:
+                        try:
+                            test_sr_data = SpectralDataParser.parse_csv(test_sr_file.getvalue())
+                            st.session_state.spectral_data['test_sr'] = test_sr_data
+                            st.success(f"Loaded: {len(test_sr_data.wavelength)} points")
+                        except Exception as e:
+                            st.error(f"Error parsing file: {e}")
+                else:
+                    sr_map = {
+                        "c-Si Mono": TypicalSpectralResponse.get_csi_mono,
+                        "HJT": TypicalSpectralResponse.get_hjt,
+                        "TOPCon": TypicalSpectralResponse.get_topcon,
+                        "Perovskite": TypicalSpectralResponse.get_perovskite,
+                        "CdTe": TypicalSpectralResponse.get_cdte
+                    }
+                    st.session_state.spectral_data['test_sr'] = sr_map[test_sr_source]()
+
+            with sm_col2:
+                st.markdown("##### Simulator Spectrum")
+                sim_spectrum_source = st.selectbox(
+                    "Simulator Spectrum Source",
+                    ["Wavelabs SINUS-220", "Wavelabs Avalon Nexun", "Class AAA Xenon", "Upload Measured Spectrum"],
+                    key="sim_spectrum_source"
+                )
+
+                if sim_spectrum_source == "Upload Measured Spectrum":
+                    sim_file = st.file_uploader(
+                        "Upload Simulator Spectrum (CSV)",
+                        type=['csv', 'txt'],
+                        key="sim_spectrum_upload",
+                        help="CSV with columns: wavelength (nm), irradiance (W/m²/nm)"
+                    )
+                    if sim_file:
+                        try:
+                            sim_data = SpectralDataParser.parse_csv(sim_file.getvalue())
+                            st.session_state.spectral_data['simulator_spectrum'] = sim_data
+                            st.success(f"Loaded: {len(sim_data.wavelength)} points")
+                        except Exception as e:
+                            st.error(f"Error parsing file: {e}")
+                else:
+                    spectrum_map = {
+                        "Wavelabs SINUS-220": WavelabsSimulatorPresets.get_sinus_220_spectrum,
+                        "Wavelabs Avalon Nexun": WavelabsSimulatorPresets.get_avalon_nexun_spectrum,
+                        "Class AAA Xenon": WavelabsSimulatorPresets.get_class_aaa_xenon_spectrum
+                    }
+                    st.session_state.spectral_data['simulator_spectrum'] = spectrum_map[sim_spectrum_source]()
+                    st.info(f"Using preset: {sim_spectrum_source}")
+
+                st.markdown("##### Uncertainty Inputs")
+                sm_unc_col1, sm_unc_col2 = st.columns(2)
+                with sm_unc_col1:
+                    sr_ref_unc = st.number_input(
+                        "SR Reference Unc (%)",
+                        min_value=0.1, max_value=10.0, value=1.0, step=0.1,
+                        key="sr_ref_unc"
+                    ) / 100
+                    sr_test_unc = st.number_input(
+                        "SR Test Unc (%)",
+                        min_value=0.1, max_value=10.0, value=2.0, step=0.1,
+                        key="sr_test_unc"
+                    ) / 100
+                with sm_unc_col2:
+                    spectrum_ref_unc = st.number_input(
+                        "Spectrum Ref Unc (%)",
+                        min_value=0.1, max_value=5.0, value=0.5, step=0.1,
+                        key="spectrum_ref_unc"
+                    ) / 100
+                    spectrum_sim_unc = st.number_input(
+                        "Spectrum Sim Unc (%)",
+                        min_value=0.1, max_value=10.0, value=2.0, step=0.1,
+                        key="spectrum_sim_unc"
+                    ) / 100
+
+            # Calculate M Factor button
+            if st.button("🔢 Calculate Spectral Mismatch Factor M", type="primary", key="calc_m_factor"):
+                sd = st.session_state.spectral_data
+                if sd['reference_sr'] and sd['test_sr'] and sd['simulator_spectrum']:
+                    try:
+                        calculator = SpectralMismatchCalculator(
+                            reference_spectrum=AM15GSpectrum.get_spectrum(),
+                            simulator_spectrum=sd['simulator_spectrum'],
+                            reference_device_sr=sd['reference_sr'],
+                            test_device_sr=sd['test_sr']
+                        )
+
+                        m_result = calculator.calculate_mismatch_factor()
+                        m_unc_result = calculator.calculate_uncertainty(
+                            sr_ref_uncertainty=sr_ref_unc,
+                            sr_test_uncertainty=sr_test_unc,
+                            spectrum_ref_uncertainty=spectrum_ref_unc,
+                            spectrum_sim_uncertainty=spectrum_sim_unc
+                        )
+
+                        st.session_state.spectral_mismatch_results = m_unc_result
+
+                        # Display results
+                        st.success("Spectral Mismatch Factor Calculated!")
+
+                        res_col1, res_col2, res_col3, res_col4 = st.columns(4)
+                        with res_col1:
+                            st.metric("M Factor", f"{m_result['M_factor']:.4f}")
+                        with res_col2:
+                            st.metric("M Deviation", f"{m_result['M_deviation_percent']:.2f}%")
+                        with res_col3:
+                            st.metric("M Uncertainty (k=1)", f"±{m_unc_result['relative_uncertainty_percent']:.2f}%")
+                        with res_col4:
+                            st.metric("M Uncertainty (k=2)", f"±{m_unc_result['relative_uncertainty_percent']*2:.2f}%")
+
+                        st.info(f"""
+                        **Result Interpretation:**
+                        - M = {m_result['M_factor']:.4f} means measured Isc needs to be multiplied by M for correction
+                        - M deviation of {m_result['M_deviation_percent']:.2f}% contributes directly to power uncertainty
+                        - Use the uncertainty value ({m_unc_result['relative_uncertainty_percent']:.2f}%) in the Spectral Mismatch field above
+                        """)
+
+                        # Optional: Save to database
+                        save_to_db = st.checkbox("Save calculation to database", key="save_m_to_db")
+                        if save_to_db:
+                            try:
+                                import os
+                                if os.environ.get('RAILWAY_DATABASE_URL') or os.environ.get('DATABASE_URL'):
+                                    from datetime import datetime
+                                    import uuid
+
+                                    db = SpectralMismatchDB()
+                                    if db.connect():
+                                        db.create_table()
+                                        record = SpectralMismatchRecord(
+                                            calculation_id=str(uuid.uuid4())[:8],
+                                            timestamp=datetime.now().isoformat(),
+                                            M_factor=m_result['M_factor'],
+                                            M_uncertainty=m_unc_result['standard_uncertainty'],
+                                            M_deviation_percent=m_result['M_deviation_percent'],
+                                            reference_spectrum="AM1.5G",
+                                            simulator_spectrum=sim_spectrum_source,
+                                            reference_device=ref_sr_source,
+                                            test_device=test_sr_source,
+                                            wavelength_range_min=m_result['wavelength_range']['min'],
+                                            wavelength_range_max=m_result['wavelength_range']['max']
+                                        )
+                                        if db.save_record(record):
+                                            st.success("Saved to Railway database!")
+                                        db.close()
+                                else:
+                                    st.warning("Database not configured (set RAILWAY_DATABASE_URL)")
+                            except Exception as e:
+                                st.warning(f"Could not save to database: {e}")
+
+                    except Exception as e:
+                        st.error(f"Calculation error: {e}")
+                else:
+                    st.warning("Please configure all spectral data sources above")
 
     with tabs[2]:
         st.markdown("#### 3. Temperature Measurement Uncertainties")
