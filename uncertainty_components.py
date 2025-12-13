@@ -25,7 +25,7 @@ Version: 2.0.0
 """
 
 from dataclasses import dataclass, field
-from typing import Dict, List, Literal, Optional, Tuple, Callable, Any
+from typing import Dict, List, Literal, Optional, Tuple, Callable, Any, Union
 from enum import Enum
 import numpy as np
 from abc import ABC, abstractmethod
