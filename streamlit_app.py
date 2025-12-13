@@ -1105,7 +1105,7 @@ def section_6_results():
     # Uncertainty budget table
     st.markdown("### 6.3 Detailed Uncertainty Budget")
 
-    budget_df = pd.DataFrame(result['budget']['components'])
+    budget_df = pd.DataFrame(result['components'])
     budget_df = budget_df[[
         'factor_id', 'name', 'standard_uncertainty', 'distribution',
         'sensitivity_coefficient', 'percentage_contribution'
@@ -1959,7 +1959,7 @@ def section_8_professional_reporting():
                 "Pmax": f"{result['pmax_measured']:.2f} W",
                 "Uncertainty (k=2)": f"±{result['expanded_uncertainty_k2']:.2f}%",
                 "Absolute Uncertainty": f"±{result['pmax_uncertainty_absolute']:.2f} W",
-                "95% CI": f"[{result['confidence_interval_95'][0]:.2f}, {result['confidence_interval_95'][1]:.2f}] W"
+                "95% CI": f"[{result['pmax_confidence_interval_95'][0]:.2f}, {result['pmax_confidence_interval_95'][1]:.2f}] W"
             })
 
 

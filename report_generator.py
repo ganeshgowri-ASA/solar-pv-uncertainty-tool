@@ -434,8 +434,7 @@ class ISO17025ReportGenerator:
         """Create detailed uncertainty budget table."""
         elements = []
 
-        budget = uncertainty_result.get('budget', {})
-        components = budget.get('components', [])
+        components = uncertainty_result.get('components', [])
 
         if not components:
             return elements
@@ -724,8 +723,7 @@ class ISO17025ReportGenerator:
             worksheet.write(0, col, header, header_fmt)
 
         # Data
-        budget = uncertainty_result.get('budget', {})
-        components = budget.get('components', [])
+        components = uncertainty_result.get('components', [])
 
         row = 1
         for comp in components:
