@@ -7,16 +7,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Planned Features
-- **Database Integration**: Railway PostgreSQL for persistent data storage
-- **User Authentication**: Role-based access control (Admin, Engineer, Reviewer)
+### Added
+- **Database Schema (Phase 2)**: Comprehensive PostgreSQL schema for Railway deployment
+  - `organizations` table for multi-tenant support
+  - `users` table with role-based access control (Admin, Engineer, Reviewer, Viewer)
+  - `modules` table for PV module specifications
+  - `measurements` table with full IV parameter storage
+  - `iv_curve_data` table for raw I-V curve points
+  - `reference_devices` table for WPVS cells and reference modules
+  - `spectral_responses` table for spectral response data
+  - `sun_simulators` table for equipment database
+  - `uncertainty_results` and `uncertainty_components` tables
+  - `files` table with approval workflow support
+  - `audit_logs` table for ISO 17025 compliance
+  - `approval_workflows` table for QMS tracking
+- Database connection utilities with Railway PostgreSQL support
+- Seed data for reference laboratories and sun simulators
+- Schema documentation (database/SCHEMA.md)
+
+### Changed
+- Updated requirements.txt with SQLAlchemy, psycopg2-binary, alembic
+- Added authentication libraries (python-jose, passlib, bcrypt)
+
+### Planned Features (Next)
 - **Spectral Mismatch Calculator**: WPVS/reference device spectral response integration
 - **IEC 60891 Methods**: Correction factor and curve fitting uncertainty
 - **Repeatability Analysis**: Multiple measurement upload (10+ files) with statistical analysis
 - **Dynamic Fishbone Diagram**: User-customizable branches with real-time updates
 - **Bifacial Module Support**: Gain uncertainty and front/rear mismatch analysis
 - **Reference Module Library**: WPVS, NREL, PTB, ESTI reference data integration
-- **QMS Workflow**: File authentication and approval process
 
 ---
 
