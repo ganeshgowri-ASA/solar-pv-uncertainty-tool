@@ -1,218 +1,190 @@
-# ☀️ PV Measurement Uncertainty Tool - Professional Edition
+# Universal Solar Simulator Uncertainty Framework
 
-A **comprehensive, production-ready platform** for calculating measurement uncertainty in photovoltaic (PV) IV measurements using internationally recognized standards. Designed for third-party testing laboratories, manufacturers, researchers, and financial stakeholders.
+## Professional Edition v2.0 - Bifacial PV Support
 
-## 🎯 Overview
+A **comprehensive, production-ready platform** for calculating measurement uncertainty in photovoltaic (PV) IV measurements using internationally recognized standards. Now featuring **full bifacial module support per IEC TS 60904-1-2:2024**.
 
-This tool implements **GUM (JCGM 100:2008)** methodology, **ISO 17025** compliant reporting, and **financial impact analysis** for comprehensive uncertainty quantification in solar PV measurements. It features an extensive equipment database, automated data extraction from certificates, and professional report generation.
+---
 
-### ⭐ Key Features
+## Overview
 
-#### **Comprehensive Uncertainty Analysis**
-- **7 Main Uncertainty Categories** with 40+ individual factors:
-  - Reference Device (calibration, drift, positioning)
-  - Sun Simulator (uniformity, temporal, spectral mismatch)
-  - Temperature Measurement & Correction (IEC 60891)
-  - I-V Measurement (voltage, current, curve fitting)
-  - Module Characteristics (hysteresis, stabilization)
-  - Environmental Conditions
-  - Measurement Procedure (R&R, ILC/Round Robin)
+This tool implements **GUM (JCGM 100:2008)** methodology, **ISO 17025** compliant reporting, and **financial impact analysis** for comprehensive uncertainty quantification in solar PV measurements. Version 2.0 introduces **universal solar simulator support** and complete **bifacial measurement capabilities**.
 
-#### **Industry Equipment Database**
-- **8 PV Technologies**: PERC, TOPCon, HJT, Perovskite, Perovskite-Silicon Tandem, CIGS, CdTe, Custom
-- **13+ Sun Simulators**: Spire, Eternalsun, Wavelabs Avalon, Pasan, ReRa, Lumartix, Atlas, and more
-- **12+ Reference Labs**: NREL, PTB, AIST, NIMS, Fraunhofer ISE, TÜV, SUPSI, PI Berlin, DNV, RETC, and more
-- **5 Standard Spectra**: AM1.5G, AM1.5D, AM1.0, AM0, Custom
+### What's New in v2.0
 
-#### **Financial Impact Analysis**
-- **Multi-Scenario Analysis**:
-  - Fresh module pricing impact
-  - Warranty/insurance claim assessment
-  - Project NPV/ROI with uncertainty propagation
+- **Universal Simulator Support**: PASAN, Spire, Halm, Meyer Burger, Wavelabs, Eternal Sun, and custom
+- **Bifacial Module Support**: Full IEC TS 60904-1-2:2024 compliance
+- **Enhanced Uncertainty Budget**: 11 categories with 60+ individual factors
+- **Equivalent Irradiance Calculation**: G_eq = G_front + phi x G_rear
+- **Bifaciality Factor Analysis**: phi_Isc, phi_Pmax, phi_Voc with uncertainties
+- **Spectral Albedo Effects**: Ground reflectance uncertainty
+- **Advanced Monte Carlo**: Adaptive sampling with convergence monitoring
+- **Standards Compliance Checker**: Automated IEC/ISO compliance verification
+
+---
+
+## Key Features
+
+### Comprehensive Uncertainty Analysis
+
+**11 Main Uncertainty Categories** with 60+ individual factors:
+
+| Category | Subcategories | Bifacial-Specific |
+|----------|---------------|-------------------|
+| 1. Reference Device | Calibration, Stability, Positioning | Rear positioning |
+| 2. Simulator - Front | Uniformity, Temporal, Spectral | - |
+| 3. Simulator - Rear | Uniformity, Temporal, Spectral, Irradiance | Yes |
+| 4. Temperature | Sensor, Uniformity, Correction | Front-rear gradient |
+| 5. I-V Measurement | Voltage, Current, DAQ | - |
+| 6. Module Characteristics | Variability, Behavior | Edge effects |
+| 7. Bifaciality Factor | phi determination, application | Yes |
+| 8. Equivalent Irradiance | G_eq calculation, correction | Yes |
+| 9. Environmental | Ambient, Albedo | Spectral albedo |
+| 10. Measurement Procedure | Repeatability, Reproducibility | - |
+| 11. Parasitic Effects | Optical crosstalk, Electrical | Yes |
+
+### Universal Simulator Database
+
+**15+ Solar Simulators** from major manufacturers:
+
+| Manufacturer | Models | Type | Classification | Bifacial |
+|--------------|--------|------|----------------|----------|
+| PASAN | HighLIGHT LED, BIFACIAL, cetisPV | LED | AAA+ | Yes |
+| Spire/Atonometrics | 5600SLP, 4600, BiFi-1000 | Xenon/Hybrid | AAA | Yes |
+| Halm/EETS | cetisPV-BI, flasher III | Hybrid | AAA+ | Yes |
+| Meyer Burger | LOANA, PSS-30 | LED | AAA+ | Yes |
+| Wavelabs | Avalon Nexun, Bifacial, SteadyState | LED | AAA | Yes |
+| Eternal Sun | SLP-150, SLP-BiFi | LED | AAA+ | Yes |
+| Custom | User-defined | Any | Configurable | Yes |
+
+### Bifacial Measurement Modes
+
+Per IEC TS 60904-1-2:2024:
+
+1. **Single-Sided Front**: Front illumination, rear dark (<0.1 W/m²)
+2. **Single-Sided Rear**: Rear illumination, front dark
+3. **Double-Sided Simultaneous**: Concurrent front and rear illumination
+4. **Equivalent Irradiance**: Adjusted for G_eq = 1000 W/m² at STC
+
+### Financial Impact Analysis
+
+- **Multi-Scenario Analysis**: Module pricing, warranty claims, project NPV
 - **Multi-Currency Support**: USD, EUR, INR, CNY, JPY, GBP, CHF, AUD
-- **Technology-Specific Benchmarks**: 2024 pricing data
+- **Bifacial Gain Impact**: Financial effect of bifacial energy gain
 
-#### **Professional Reporting (ISO 17025)** ✅ FULLY INTEGRATED
-- PDF reports with company logo and signatures
-- Excel workbooks with multiple sheets (Summary, Budget, Equipment)
-- Document control (format numbers, record references)
+### Professional Reporting (ISO 17025)
+
+- PDF/Excel reports with complete uncertainty budgets
+- Bifacial-specific result sections
+- Compliance status for all applicable standards
 - Preparer/Reviewer/Approver signature fields
-- Compliant with ISO 17025 format requirements
-- One-click generation and download
-- Customizable report options and content
 
-#### **File Upload & Auto-Extraction**
-- **PDF**: Calibration certificates, test reports, datasheets
-- **Excel**: I-V curve data, summary results, repeatability data
-- **PVsyst .PAN Files**: Complete module parameter extraction
-- **Automatic Data Validation**: I-V ratio checks, fill factor calculation
+---
 
-#### **Interactive Visualizations**
-- Fishbone uncertainty diagram
-- Uncertainty budget bar charts
-- Contribution pie charts
-- Pareto cumulative analysis
-- Financial impact visualizations
-
-## 🚀 Quick Start
+## Quick Start
 
 ### Installation
 
-1. Clone the repository:
-   ```bash
-   git clone <repository-url>
-   cd solar-pv-uncertainty-tool
-   ```
+```bash
+# Clone the repository
+git clone <repository-url>
+cd solar-pv-uncertainty-tool
 
-2. Install dependencies:
-   ```bash
-   pip install -r requirements.txt
-   ```
+# Install dependencies
+pip install -r requirements.txt
 
-3. **Run the Professional Edition:**
-   ```bash
-   streamlit run streamlit_app_pro.py
-   ```
-
-   Or the original simplified version:
-   ```bash
-   streamlit run streamlit_app.py
-   ```
+# Run the Professional Edition
+streamlit run streamlit_app_pro.py
+```
 
 The app will open in your browser at `http://localhost:8501`
 
-**📖 First time user?** See **[GETTING_STARTED.md](GETTING_STARTED.md)** for a 5-minute tutorial!
+### Basic Usage - Bifacial Module
 
-### Using with Snowflake
+```python
+from bifacial_uncertainty import BifacialModule, BifacialUncertaintyCalculator
 
-This tool is compatible with Snowflake Streamlit apps. Deploy it to Snowflake by:
+# Create a bifacial module
+module = BifacialModule(
+    manufacturer="Example Solar",
+    model="TOPCon-400-BF",
+    pmax_front=400.0,
+    pmax_rear=280.0,
+    isc_front=10.5,
+    isc_rear=7.87
+)
 
-1. Upload all Python files to your Snowflake stage
-2. Create a Streamlit app pointing to `streamlit_app.py`
-3. The tool will automatically use Snowflake's Python environment
+# Calculate bifaciality factors
+calc = BifacialUncertaintyCalculator(module=module)
+factors = calc.calculate_bifaciality_factors(
+    front_isc=10.5, front_voc=45.0, front_pmax=400.0, front_ff=0.85,
+    rear_isc=7.87, rear_voc=44.8, rear_pmax=280.0, rear_ff=0.84
+)
 
-## User Guide
-
-### 1. Power Measurement Uncertainty
-
-Calculate uncertainty for instantaneous PV power measurements.
-
-**Inputs:**
-- Irradiance (W/m²) and its uncertainty
-- Module temperature (°C) and its uncertainty
-- Measured power (W) and power meter uncertainty
-- Module efficiency and its uncertainty
-- Temperature coefficient (%/°C)
-
-**Outputs:**
-- Combined standard uncertainty
-- Expanded uncertainty (k=2, 95% confidence)
-- Relative uncertainty (%)
-- Uncertainty budget showing contribution of each component
-- Interactive visualizations
-
-**Example Use Case:** Determining the uncertainty in a flash test measurement of a PV module.
-
-### 2. Performance Ratio Uncertainty
-
-Calculate uncertainty for Performance Ratio (PR) calculations.
-
-**Formula:** PR = E_measured / (H × P_installed)
-
-**Inputs:**
-- Measured energy output (kWh)
-- Total irradiation (kWh/m²)
-- Installed capacity (kWp)
-- Uncertainties for each parameter
-
-**Outputs:**
-- PR value with combined uncertainty
-- Uncertainty budget
-- Confidence intervals
-
-**Example Use Case:** Annual performance reporting with uncertainty bounds.
-
-### 3. Custom Uncertainty Analysis
-
-Build your own uncertainty budget with user-defined components.
-
-**Features:**
-- Add multiple uncertainty components
-- Define distribution types (normal, uniform, triangular)
-- Specify sensitivity coefficients
-- Calculate combined uncertainty using GUM method
-- Export detailed budget
-
-**Example Use Case:** Analyzing complex measurement chains or custom PV metrics.
-
-### 4. Monte Carlo Simulation
-
-Run Monte Carlo simulations for non-linear uncertainty propagation.
-
-**Features:**
-- Configurable number of samples (1,000 to 1,000,000)
-- Multiple distribution types
-- Full distribution statistics (mean, median, skewness, kurtosis)
-- Percentile analysis
-- Sensitivity analysis via correlation
-
-**Example Use Case:** Validating GUM results or analyzing non-Gaussian distributions.
-
-### 5. Batch Data Analysis
-
-Process time-series PV measurement data.
-
-**Features:**
-- CSV file upload
-- Data validation and quality checks
-- Batch uncertainty calculations
-- Time-series visualization with uncertainty bands
-- Statistical summaries
-- Export results
-
-**Example Use Case:** Analyzing hourly or daily PV production data with uncertainties.
-
-## Technical Details
-
-### Calculation Methods
-
-#### GUM Methodology
-
-The tool implements the law of propagation of uncertainty:
-
-```
-u_c²(y) = Σ(∂f/∂x_i)² · u²(x_i) + 2·Σ Σ(∂f/∂x_i)·(∂f/∂x_j)·u(x_i,x_j)
+print(f"phi_Isc: {factors.phi_isc:.3f} +/- {factors.u_phi_isc:.4f}")
+print(f"phi_Pmax: {factors.phi_pmax:.3f} +/- {factors.u_phi_pmax:.4f}")
 ```
 
-Where:
-- `u_c(y)` is the combined standard uncertainty
-- `∂f/∂x_i` are sensitivity coefficients
-- `u(x_i)` are standard uncertainties of input quantities
-- Correlation terms are included when relevant
+### Build Uncertainty Budget
 
-#### Monte Carlo Method
+```python
+from uncertainty_components import UncertaintyBudgetBuilder
 
-Implements GUM Supplement 1 approach:
-1. Sample from input probability distributions
-2. Propagate through measurement model
-3. Analyze output distribution
-4. Calculate coverage intervals
+# Build bifacial STC uncertainty budget
+builder = UncertaintyBudgetBuilder(is_bifacial=True)
+budget = (
+    builder
+    .set_simulator("pasan_highlight_bifacial")
+    .set_reference("nrel_wpvs")
+    .build_bifacial_stc()
+)
 
-### Supported Distributions
+print(f"Combined uncertainty (k=1): {budget.combined_standard_uncertainty:.2f}%")
+print(f"Expanded uncertainty (k=2): {budget.expanded_uncertainty:.2f}%")
+```
 
-- **Normal (Gaussian)**: Most common for calibrated instruments
-- **Uniform (Rectangular)**: For instruments with manufacturer's specification
-- **Triangular**: When limits and most likely value are known
-- **Log-Normal**: For strictly positive quantities
+### Run Monte Carlo Analysis
 
-### Uncertainty Budget Components
+```python
+from monte_carlo_analysis import BifacialMonteCarloSimulator, BifacialMCInputs
 
-The tool automatically calculates:
-- Standard uncertainty for each component
-- Sensitivity coefficients
-- Variance contributions
-- Percentage contributions
-- Correlation effects (when specified)
+# Configure inputs
+inputs = BifacialMCInputs()
+inputs.g_front.mean = 900.0
+inputs.g_rear.mean = 135.0
+inputs.phi_isc.mean = 0.75
+
+# Run simulation
+sim = BifacialMonteCarloSimulator(n_samples=100000, seed=42)
+sim.set_bifacial_inputs(inputs)
+result = sim.simulate_equivalent_irradiance()
+
+print(f"G_eq: {result.mean:.1f} +/- {result.std:.1f} W/m²")
+print(f"95% coverage: [{result.coverage_95[0]:.1f}, {result.coverage_95[1]:.1f}]")
+```
+
+### Check Standards Compliance
+
+```python
+from standards_compliance import check_bifacial_stc_compliance
+
+results = check_bifacial_stc_compliance(
+    g_front=1000.0,
+    g_rear=150.0,
+    temperature=25.2,
+    phi_isc=0.75,
+    phi_pmax=0.70,
+    uniformity_front=1.8,
+    uniformity_rear=2.5,
+    temporal_front=0.3,
+    temporal_rear=0.5
+)
+
+print(results['bifacial'].summary())
+print(f"Simulator class: {results['classification'].overall_class}")
+```
+
+---
 
 ## Architecture Overview
 
@@ -268,39 +240,52 @@ The PV Measurement Uncertainty Tool is a modular, production-ready platform buil
 ```
 solar-pv-uncertainty-tool/
 │
-├── streamlit_app.py              # Main Professional Edition application
-├── streamlit_app_legacy.py       # Legacy simplified version
+├── Core Application
+│   ├── streamlit_app.py          # Main Professional Edition UI
+│   ├── streamlit_app_legacy.py   # Legacy simplified version
+│   └── config_data.py            # Equipment database & reference data
 │
-├── CORE CALCULATION MODULES
-├── uncertainty_calculator.py     # Basic GUM methodology (PVUncertaintyCalculator)
-├── pv_uncertainty_enhanced.py    # Enhanced 7-category uncertainty budget
-├── monte_carlo.py                # Monte Carlo simulation engine
+├── Uncertainty Calculation (Original)
+│   ├── uncertainty_calculator.py  # Basic GUM methodology
+│   ├── pv_uncertainty_enhanced.py # Enhanced 7-category budget
+│   └── monte_carlo.py             # Basic MC simulation
 │
-├── DATA & CONFIGURATION
-├── config_data.py                # Equipment database & reference data
-│                                 # - 8 PV technologies (PERC, TOPCon, HJT, etc.)
-│                                 # - 13+ sun simulators (Spire, Wavelabs, etc.)
-│                                 # - 12+ reference labs (NREL, PTB, etc.)
-│                                 # - 8 currencies with exchange rates
-│                                 # - 7 uncertainty category definitions
-├── data_handler.py               # Data validation and I/O utilities
-├── file_utilities.py             # File extraction (PDF, Excel, PVsyst .PAN)
+├── Bifacial Enhancement (v2.0)
+│   ├── bifacial_uncertainty.py    # Bifacial calculations
+│   ├── uncertainty_components.py  # Component classes (15+ simulators)
+│   ├── monte_carlo_analysis.py    # Enhanced MC with adaptive sampling
+│   └── standards_compliance.py    # IEC standards checking
 │
-├── OUTPUT GENERATION
-├── report_generator.py           # ISO 17025 compliant PDF/Excel reports
-├── visualizations.py             # Plotly visualizations
-├── financial_impact.py           # Financial impact analysis
+├── Database (Railway PostgreSQL)
+│   ├── database/models.py         # SQLAlchemy ORM models
+│   ├── database/connection.py     # Connection utilities
+│   ├── database/seed_data.py      # Demo data
+│   └── database/SCHEMA.md         # Database documentation
 │
-├── DOCUMENTATION
-├── README.md                     # This documentation
-├── GETTING_STARTED.md            # Quick start guide
-├── DEVELOPMENT_ROADMAP.md        # Future development plans
-├── CHANGELOG.md                  # Version history
+├── Support Modules
+│   ├── report_generator.py        # ISO 17025 PDF/Excel reports
+│   ├── financial_impact.py        # Financial impact analysis
+│   ├── visualizations.py          # Plotly charts
+│   ├── file_utilities.py          # PDF/Excel/PVsyst extraction
+│   └── data_handler.py            # Data validation
 │
-├── CONFIGURATION FILES
-├── requirements.txt              # Python dependencies
-├── .devcontainer/                # DevContainer configuration
-└── .github/workflows/            # GitHub Actions workflows
+├── Testing
+│   └── test_scenarios.py          # Comprehensive tests (80+)
+│
+├── Documentation
+│   ├── README.md                  # This file
+│   ├── CHANGELOG.md               # Version history
+│   ├── ENHANCEMENT_SPEC.md        # Technical specification
+│   ├── EXCEL_TEMPLATE_GUIDE.md    # Template documentation
+│   ├── GETTING_STARTED.md         # User tutorial
+│   └── DEVELOPMENT_ROADMAP.md     # Development plan
+│
+├── Configuration
+│   ├── requirements.txt           # Python dependencies
+│   ├── .devcontainer/             # DevContainer configuration
+│   └── .github/workflows/         # GitHub Actions workflows
+│
+└── LICENSE                        # Apache 2.0
 ```
 
 ### Key Components
@@ -333,122 +318,166 @@ ISO 17025 compliant output with:
 - Excel workbooks with multi-sheet analysis
 - Customizable headers, logos, and metadata
 
-## API Reference
+---
 
-### UncertaintyCalculator
+## Technical Details
 
-```python
-from uncertainty_calculator import PVUncertaintyCalculator
+### Bifaciality Factor Calculation
 
-calc = PVUncertaintyCalculator()
-calc.add_component(
-    name="Irradiance",
-    value=1000.0,
-    uncertainty=20.0,
-    uncertainty_type="standard",
-    distribution="normal",
-    sensitivity_coefficient=0.2
-)
-combined_unc, budget = calc.calculate_combined_uncertainty()
+Per IEC TS 60904-1-2:2024:
+
+```
+phi_Isc = Isc_rear / Isc_front
+phi_Voc = Voc_rear / Voc_front
+phi_Pmax = Pmax_rear / Pmax_front
+phi_FF = FF_rear / FF_front
 ```
 
-### Monte Carlo Simulator
-
-```python
-from monte_carlo import PVMonteCarlo
-
-result = PVMonteCarlo.simulate_power_uncertainty(
-    irradiance_mean=1000.0,
-    irradiance_std=20.0,
-    temperature_mean=45.0,
-    temperature_std=1.0,
-    power_meter_std=2.0,
-    n_samples=100000
-)
+**Uncertainty propagation** (with correlation):
+```
+u(phi)/phi = sqrt[(u_rear/X_rear)² + (u_front/X_front)² - 2*rho*(u_rear/X_rear)*(u_front/X_front)]
 ```
 
-## Standards and References
+### Equivalent Irradiance
 
-This tool implements methods from:
+```
+G_eq = G_front + phi × G_rear
+```
 
-- **JCGM 100:2008** - Evaluation of measurement data — Guide to the expression of uncertainty in measurement (GUM)
-- **JCGM 101:2008** - Evaluation of measurement data — Supplement 1 to the GUM — Propagation of distributions using a Monte Carlo method
-- **IEC 61724-1:2021** - Photovoltaic system performance — Part 1: Monitoring
-- **ISO/IEC Guide 98-3:2008** - Uncertainty of measurement
+**For target G_eq = 1000 W/m² with ratio R = G_rear/G_front:**
+```
+G_front = 1000 / (1 + phi × R)
+G_rear = R × G_front
+```
 
-## Example Applications
+**Uncertainty propagation:**
+```
+u²(G_eq) = u²(G_front) + phi² × u²(G_rear) + G_rear² × u²(phi)
+```
 
-### 1. Module Flash Test Uncertainty
+### Bifacial Gain
 
-Quantify uncertainty in PV module power rating based on:
-- Pyranometer calibration uncertainty
-- Spectrum mismatch
-- Temperature sensor accuracy
-- Power meter precision
-- Non-uniformity of irradiance
+```
+BG = (P_bifacial - P_mono) / P_mono
+```
 
-### 2. Array Performance Monitoring
+Typical values: 5-25% depending on installation conditions.
 
-Calculate PR uncertainty including:
-- Energy meter accuracy
-- Plane-of-array irradiance sensor
-- Rated capacity tolerance
-- Data acquisition uncertainty
-- Calculation algorithm effects
+---
 
-### 3. Warranty Claim Verification
+## Supported Standards
 
-Demonstrate whether measured performance is within specification considering:
-- Measurement uncertainties
-- Environmental corrections
-- Degradation models
-- Statistical confidence levels
+| Standard | Version | Description |
+|----------|---------|-------------|
+| IEC TS 60904-1-2 | 2024 | Bifacial PV device characterization |
+| IEC 60904-1 | 2020 | I-V characteristics measurement |
+| IEC 60904-3 | 2019 | Spectral irradiance reference |
+| IEC 60904-7 | 2019 | Spectral mismatch correction |
+| IEC 60904-9 | 2020 | Solar simulator classification |
+| IEC 60891 | 2021 | Temperature/irradiance corrections |
+| JCGM 100 | 2008 | GUM uncertainty methodology |
+| JCGM 101 | 2008 | Monte Carlo method |
+| ISO 17025 | 2017 | Laboratory competence |
 
-## Performance Optimization
+---
 
-The tool is optimized for:
-- Fast GUM calculations (< 1 second)
-- Efficient Monte Carlo sampling (100k samples in ~2-5 seconds)
-- Large batch processing (1000s of records)
-- Minimal memory footprint for Snowflake deployment
+## Typical Uncertainty Values
 
-## Troubleshooting
+### Monofacial Measurements
 
-### Common Issues
+| Parameter | Combined (k=1) | Expanded (k=2) |
+|-----------|----------------|----------------|
+| Pmax STC | 1.8-2.5% | 3.6-5.0% |
+| Isc | 1.5-2.0% | 3.0-4.0% |
+| Voc | 0.5-1.0% | 1.0-2.0% |
+| FF | 1.0-1.5% | 2.0-3.0% |
 
-**Issue**: Sensitivity coefficients are zero or incorrect
-- **Solution**: Check that measured values are non-zero and sensitivity calculation logic is appropriate for your model
+### Bifacial Measurements
 
-**Issue**: Monte Carlo results differ from GUM
-- **Solution**: This is normal for non-linear models or non-Gaussian distributions. Use more samples or review input distributions
+| Parameter | Combined (k=1) | Expanded (k=2) |
+|-----------|----------------|----------------|
+| Pmax front | 1.8-2.5% | 3.6-5.0% |
+| Pmax rear | 2.5-3.5% | 5.0-7.0% |
+| phi_Isc | 2.0-3.0% | 4.0-6.0% |
+| phi_Pmax | 2.5-3.5% | 5.0-7.0% |
+| G_equivalent | 2.0-2.8% | 4.0-5.6% |
+| Bifacial gain | 10-20% relative | - |
 
-**Issue**: Batch processing is slow
-- **Solution**: Reduce number of records, simplify uncertainty model, or use vectorized calculations
+---
+
+## Running Tests
+
+```bash
+# Run all tests
+python test_scenarios.py
+
+# Run with verbose output
+python -m pytest test_scenarios.py -v
+
+# Run specific test class
+python -m pytest test_scenarios.py::TestBifacialityFactors -v
+```
+
+---
+
+## Performance
+
+- GUM calculations: < 100 ms
+- Monte Carlo (100k samples): 2-5 seconds
+- Monte Carlo (1M samples): < 10 seconds
+- Budget construction: < 500 ms
+- Compliance checks: < 100 ms
+
+---
+
+## Backward Compatibility
+
+All existing monofacial calculations remain fully functional:
+
+```python
+# Existing code continues to work
+from uncertainty_components import UncertaintyBudgetBuilder
+
+builder = UncertaintyBudgetBuilder(is_bifacial=False)
+budget = builder.build_standard_stc()  # Monofacial budget
+```
+
+The original `uncertainty_calculator.py` and `monte_carlo.py` modules are unchanged.
+
+---
 
 ## Contributing
 
-Contributions are welcome! Please:
 1. Fork the repository
 2. Create a feature branch
 3. Add tests for new functionality
-4. Submit a pull request
+4. Run the test suite
+5. Submit a pull request
+
+---
 
 ## License
 
 Apache License 2.0 - See LICENSE file for details
 
-## Support
-
-For issues, questions, or suggestions:
-- Create an issue on GitHub
-- Review the documentation
-- Check the troubleshooting section
+---
 
 ## Version History
 
 See [CHANGELOG.md](CHANGELOG.md) for detailed version history.
 
-**v1.0-stable-bugfix** (Current - December 2025)
+### v2.0.0-integrated (Current - December 2025)
+- **Railway PostgreSQL Database**: Full database backend with SQLAlchemy ORM
+- **Universal Solar Simulator Support**: PASAN, Spire, Halm, Meyer Burger, Wavelabs, Eternal Sun
+- **Full Bifacial Module Support**: Per IEC TS 60904-1-2:2024
+- Enhanced 11-category uncertainty budget with 60+ factors
+- Equivalent irradiance calculations (G_eq)
+- Bifaciality factor analysis with uncertainty propagation
+- Advanced Monte Carlo with adaptive sampling
+- Standards compliance checker (IEC 60904-9, ISO 17025)
+- Comprehensive test suite (80+ tests)
+
+### v1.0-stable-bugfix (December 2025)
 - Fixed critical KeyError bugs in uncertainty calculation and reporting
 - Migrated to Professional Edition UI
 - Comprehensive 7-category uncertainty budget (40+ individual factors)
@@ -458,7 +487,7 @@ See [CHANGELOG.md](CHANGELOG.md) for detailed version history.
 - File extraction from PDFs, Excel, PVsyst .PAN files
 - Multi-currency support (USD, EUR, INR, CNY, JPY, GBP, CHF, AUD)
 
-**v1.0.0** (Initial Release)
+### v1.0.0 (Initial Release)
 - Initial release with basic GUM methodology
 - Monte Carlo simulation engine
 - Five analysis modes
@@ -467,16 +496,17 @@ See [CHANGELOG.md](CHANGELOG.md) for detailed version history.
 - CSV export functionality
 - Streamlit/Snowflake compatible
 
+---
+
 ## Acknowledgments
 
-Developed following international metrological standards and best practices from:
 - BIPM (International Bureau of Weights and Measures)
 - IEC (International Electrotechnical Commission)
 - ISO (International Organization for Standardization)
-- NREL (National Renewable Energy Laboratory) PV measurement guidelines
+- NREL (National Renewable Energy Laboratory)
+- Fraunhofer ISE bifacial PV research
 
 ---
 
-**Author**: Solar Energy Uncertainty Analysis Team
-**Contact**: [Your Contact Information]
+**Author**: Universal Solar Simulator Framework Team
 **Last Updated**: 2025
