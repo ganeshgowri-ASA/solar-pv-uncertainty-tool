@@ -34,6 +34,13 @@ from file_utilities import (
 )
 from report_generator import ISO17025ReportGenerator
 
+# Database integration (optional - fails gracefully if not configured)
+try:
+    from database.streamlit_integration import display_db_status_sidebar, get_db_status
+    DB_AVAILABLE = True
+except ImportError:
+    DB_AVAILABLE = False
+
 # Page configuration
 st.set_page_config(
     page_title="PV Uncertainty Tool - Professional Edition",
@@ -2012,6 +2019,10 @@ def main():
             st.info("User guide will open here")
         if st.button("🔬 Standards Info", use_container_width=True):
             st.info("Standards information will open here")
+
+        # Database status (Railway PostgreSQL)
+        if DB_AVAILABLE:
+            display_db_status_sidebar()
 
     # Main content tabs
     tabs = st.tabs([

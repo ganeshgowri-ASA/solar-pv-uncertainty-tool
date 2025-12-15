@@ -6,7 +6,7 @@ Provides connection management and session handling
 import os
 from typing import Optional
 from contextlib import contextmanager
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker, Session
 from sqlalchemy.pool import QueuePool
 
@@ -24,19 +24,47 @@ DEFAULT_CONFIG = {
 }
 
 
+def _get_streamlit_secrets():
+    """
+    Try to get database URL from Streamlit secrets.
+    Returns None if not running in Streamlit or secrets not configured.
+    """
+    try:
+        import streamlit as st
+        # Check if DATABASE_URL is in secrets
+        if hasattr(st, 'secrets') and 'DATABASE_URL' in st.secrets:
+            return st.secrets['DATABASE_URL']
+        # Also check for nested postgres section
+        if hasattr(st, 'secrets') and 'postgres' in st.secrets:
+            pg = st.secrets['postgres']
+            password = pg.get('password', '')
+            if password:
+                return f"postgresql://{pg['user']}:{password}@{pg['host']}:{pg['port']}/{pg['database']}"
+            else:
+                return f"postgresql://{pg['user']}@{pg['host']}:{pg['port']}/{pg['database']}"
+    except (ImportError, AttributeError, KeyError):
+        pass
+    return None
+
+
 def get_database_url() -> str:
     """
-    Get database URL from environment variables.
+    Get database URL from multiple sources.
 
     Priority:
-    1. DATABASE_URL (Railway sets this automatically)
-    2. Constructed from individual POSTGRES_* variables
+    1. Streamlit secrets (for Streamlit Cloud deployment)
+    2. DATABASE_URL environment variable (Railway sets this automatically)
+    3. Constructed from individual POSTGRES_* environment variables
 
     Returns:
         PostgreSQL connection URL
     """
-    # Check for Railway-style DATABASE_URL first
-    database_url = os.environ.get('DATABASE_URL')
+    # Check Streamlit secrets first (for Streamlit Cloud)
+    database_url = _get_streamlit_secrets()
+
+    # Check for Railway-style DATABASE_URL in environment
+    if not database_url:
+        database_url = os.environ.get('DATABASE_URL')
 
     if database_url:
         # Railway uses postgres:// but SQLAlchemy 2.0 requires postgresql://
@@ -182,7 +210,7 @@ def check_connection() -> bool:
     try:
         engine = _get_engine()
         with engine.connect() as conn:
-            conn.execute("SELECT 1")
+            conn.execute(text("SELECT 1"))
         return True
     except Exception as e:
         print(f"Database connection failed: {e}")
