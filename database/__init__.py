@@ -23,7 +23,18 @@ from database.connection import (
     get_database_url,
     get_engine,
     get_session,
-    init_database
+    session_scope,
+    init_database,
+    check_connection,
+    get_connection_info
+)
+from database.streamlit_integration import (
+    get_db_status,
+    init_db_schema,
+    display_db_status_sidebar,
+    display_db_admin_panel,
+    save_uncertainty_result,
+    get_saved_results
 )
 
 __all__ = [
@@ -46,5 +57,15 @@ __all__ = [
     'get_database_url',
     'get_engine',
     'get_session',
-    'init_database'
+    'session_scope',
+    'init_database',
+    'check_connection',
+    'get_connection_info',
+    # Streamlit integration
+    'get_db_status',
+    'init_db_schema',
+    'display_db_status_sidebar',
+    'display_db_admin_panel',
+    'save_uncertainty_result',
+    'get_saved_results'
 ]
