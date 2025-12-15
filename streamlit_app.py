@@ -33,6 +33,10 @@ from file_utilities import (
     DatasheetExtractor, PVsystPANParser
 )
 from report_generator import ISO17025ReportGenerator
+from database import (
+    DatabaseManager, get_database_manager, init_database_from_secrets,
+    ConnectionStatus, MigrationResult
+)
 
 # Page configuration
 st.set_page_config(
@@ -1963,6 +1967,210 @@ def section_8_professional_reporting():
             })
 
 
+# ============================================
+# SECTION 9: ADMIN & DATABASE MANAGEMENT
+# ============================================
+
+def section_9_admin_database():
+    """Admin section for database management and migrations."""
+    st.markdown('<div class="section-header">Admin & Database Management</div>',
+                unsafe_allow_html=True)
+
+    # Initialize database manager from secrets if available
+    try:
+        if hasattr(st, 'secrets') and ('DATABASE_URL' in st.secrets or 'database' in st.secrets):
+            db = init_database_from_secrets(dict(st.secrets))
+        else:
+            db = get_database_manager()
+    except Exception as e:
+        st.error(f"Failed to initialize database manager: {e}")
+        db = get_database_manager()
+
+    # Create tabs for admin sections
+    admin_tabs = st.tabs(["Database Connection", "Migrations", "Tables"])
+
+    # ========================================
+    # TAB 1: Database Connection
+    # ========================================
+    with admin_tabs[0]:
+        st.markdown("### Database Connection Status")
+
+        col1, col2 = st.columns([2, 1])
+
+        with col1:
+            # Connection status card
+            if st.button("Test Connection", type="primary", use_container_width=True):
+                with st.spinner("Testing connection..."):
+                    status = db.test_connection()
+                    st.session_state.db_connection_status = status
+
+            # Display current status
+            if 'db_connection_status' in st.session_state:
+                status = st.session_state.db_connection_status
+
+                if status.connected:
+                    st.success("Connected to Database")
+                    st.markdown(f"""
+                    | Property | Value |
+                    |----------|-------|
+                    | **Host** | `{status.host}` |
+                    | **Database** | `{status.database_name}` |
+                    | **Version** | {status.version} |
+                    | **Latency** | {status.latency_ms} ms |
+                    """)
+                else:
+                    st.error("Connection Failed")
+                    st.markdown(f"**Error:** {status.error}")
+
+        with col2:
+            st.markdown("#### Configuration")
+            # Check if DATABASE_URL is configured
+            has_url = bool(db.database_url)
+            if has_url:
+                st.success("DATABASE_URL configured")
+                # Show masked URL
+                masked = db.database_url[:20] + "..." if db.database_url else "Not set"
+                st.code(masked, language=None)
+            else:
+                st.warning("DATABASE_URL not set")
+                st.markdown("""
+                Add to `.streamlit/secrets.toml`:
+                ```toml
+                DATABASE_URL = "postgresql://..."
+                ```
+                """)
+
+    # ========================================
+    # TAB 2: Migrations
+    # ========================================
+    with admin_tabs[1]:
+        st.markdown("### Database Migrations")
+
+        col1, col2 = st.columns(2)
+
+        with col1:
+            st.markdown("#### Applied Migrations")
+            applied = db.get_applied_migrations()
+
+            if applied:
+                for m in applied:
+                    with st.container():
+                        st.markdown(f"""
+                        **{m['version']}** - {m['name']}
+                        <small style="color: gray;">Applied: {m['applied_at']}</small>
+                        """, unsafe_allow_html=True)
+            else:
+                st.info("No migrations applied yet")
+
+        with col2:
+            st.markdown("#### Pending Migrations")
+            pending = db.get_pending_migrations()
+
+            if pending:
+                for m in pending:
+                    st.markdown(f"**{m['version']}** - {m['name']}")
+            else:
+                st.success("All migrations applied!")
+
+        st.markdown("---")
+
+        # Migration execution section
+        st.markdown("### Run Migrations")
+
+        if not db.database_url:
+            st.warning("Configure DATABASE_URL to run migrations")
+        elif not pending:
+            st.info("No pending migrations to run")
+        else:
+            st.markdown(f"**{len(pending)} pending migration(s)** ready to apply:")
+            for m in pending:
+                st.markdown(f"- `{m['version']}_{m['name']}`")
+
+            st.markdown("")
+
+            # One-click migration button
+            if st.button("Run All Pending Migrations", type="primary", use_container_width=True):
+                with st.spinner("Running migrations..."):
+                    results = db.run_all_pending_migrations()
+
+                    # Display results
+                    for result in results:
+                        if result.success:
+                            if result.version:
+                                st.success(f"Migration {result.version}: {result.message} ({result.execution_time_ms}ms)")
+                            else:
+                                st.info(result.message)
+                        else:
+                            st.error(f"Migration {result.version or 'N/A'}: {result.message}")
+                            if result.error:
+                                with st.expander("Error Details"):
+                                    st.code(result.error)
+
+                    # Refresh the page to show updated status
+                    if all(r.success for r in results):
+                        st.success("All migrations completed successfully!")
+                        st.balloons()
+
+        # Manual migration section
+        with st.expander("Run Individual Migration"):
+            pending = db.get_pending_migrations()
+            if pending:
+                selected = st.selectbox(
+                    "Select migration to run:",
+                    options=pending,
+                    format_func=lambda x: f"{x['version']} - {x['name']}"
+                )
+
+                if st.button("Run Selected Migration"):
+                    with st.spinner(f"Running migration {selected['version']}..."):
+                        result = db.run_migration(selected)
+
+                        if result.success:
+                            st.success(result.message)
+                        else:
+                            st.error(result.message)
+                            if result.error:
+                                st.code(result.error)
+            else:
+                st.info("No pending migrations available")
+
+    # ========================================
+    # TAB 3: Tables
+    # ========================================
+    with admin_tabs[2]:
+        st.markdown("### Database Tables")
+
+        if st.button("Refresh Table Info", use_container_width=True):
+            with st.spinner("Loading table information..."):
+                tables = db.get_table_list()
+                counts = db.get_table_row_counts()
+                st.session_state.db_tables = tables
+                st.session_state.db_table_counts = counts
+
+        if 'db_tables' in st.session_state:
+            tables = st.session_state.db_tables
+            counts = st.session_state.get('db_table_counts', {})
+
+            if tables:
+                # Create a dataframe for display
+                import pandas as pd
+                table_data = []
+                for table in sorted(tables):
+                    table_data.append({
+                        'Table Name': table,
+                        'Row Count': counts.get(table, 'N/A')
+                    })
+
+                df = pd.DataFrame(table_data)
+                st.dataframe(df, use_container_width=True, hide_index=True)
+
+                st.markdown(f"**Total Tables:** {len(tables)}")
+            else:
+                st.info("No tables found. Run migrations to create the database schema.")
+        else:
+            st.info("Click 'Refresh Table Info' to load table information")
+
+
 def main():
     """Main application function."""
 
@@ -2022,7 +2230,8 @@ def main():
         "5️⃣ Uncertainty",
         "6️⃣ Results",
         "7️⃣ Financial",
-        "8️⃣ Report"
+        "8️⃣ Report",
+        "⚙️ Admin"
     ])
 
     with tabs[0]:
@@ -2048,6 +2257,9 @@ def main():
 
     with tabs[7]:
         section_8_professional_reporting()
+
+    with tabs[8]:
+        section_9_admin_database()
 
 
 if __name__ == "__main__":
