@@ -144,7 +144,7 @@ def get_table_counts() -> Dict[str, int]:
             Organization, User, Module, Measurement, IVCurveData,
             SunSimulator, ReferenceDevice, SpectralResponse,
             UncertaintyResult, UncertaintyComponent, File, AuditLog,
-            ApprovalWorkflow
+            ApprovalWorkflow, Sample
         )
 
         models = [
@@ -161,6 +161,7 @@ def get_table_counts() -> Dict[str, int]:
             ('files', File),
             ('audit_logs', AuditLog),
             ('approval_workflows', ApprovalWorkflow),
+            ('samples', Sample),
         ]
 
         with session_scope() as session:

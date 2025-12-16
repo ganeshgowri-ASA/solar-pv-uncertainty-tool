@@ -17,7 +17,9 @@ from database.models import (
     UncertaintyComponent,
     File,
     AuditLog,
-    ApprovalWorkflow
+    ApprovalWorkflow,
+    Sample,
+    SampleStatus
 )
 from database.connection import (
     get_database_url,
@@ -56,6 +58,8 @@ __all__ = [
     'File',
     'AuditLog',
     'ApprovalWorkflow',
+    'Sample',
+    'SampleStatus',
     # Connection utilities
     'get_database_url',
     'get_engine',

@@ -747,3 +747,83 @@ class ApprovalWorkflow(Base):
 
     def __repr__(self):
         return f"<ApprovalWorkflow(id={self.id}, entity={self.entity_type}:{self.entity_id}, status={self.to_status.value})>"
+
+
+# =============================================================================
+# SAMPLE MODEL (Traceability)
+# =============================================================================
+
+class SampleStatus(enum.Enum):
+    """Sample handling status."""
+    RECEIVED = "received"
+    IN_STORAGE = "in_storage"
+    IN_TESTING = "in_testing"
+    TESTING_COMPLETE = "testing_complete"
+    RETURNED = "returned"
+    DISPOSED = "disposed"
+
+
+class Sample(Base):
+    """Sample tracking for lab traceability and chain of custody."""
+    __tablename__ = 'samples'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    organization_id = Column(Integer, ForeignKey('organizations.id'))
+
+    # Sample identification - receipt_id is the primary tracking number
+    receipt_id = Column(String(100), unique=True, nullable=False, index=True)
+    internal_id = Column(String(100), index=True)  # Internal lab reference
+    client_reference = Column(String(255))  # Client's reference number
+
+    # Link to module under test
+    module_id = Column(Integer, ForeignKey('modules.id'))
+
+    # Receipt information
+    receipt_date = Column(DateTime, nullable=False)
+    received_by_id = Column(Integer, ForeignKey('users.id'))
+    client_name = Column(String(255))
+    client_contact = Column(String(255))
+
+    # Sample condition on receipt
+    condition_on_receipt = Column(Text)
+    packaging_intact = Column(Boolean, default=True)
+    visual_damage_noted = Column(Boolean, default=False)
+    damage_description = Column(Text)
+
+    # Storage information
+    storage_location = Column(String(255))
+    storage_conditions = Column(String(255))  # e.g., "Ambient, 20-25°C"
+
+    # Status tracking
+    status = Column(Enum(SampleStatus), default=SampleStatus.RECEIVED)
+
+    # Chain of custody
+    custody_log = Column(JSON)  # [{date, from_user, to_user, reason}, ...]
+
+    # Testing allocation
+    allocated_tests = Column(JSON)  # List of test types allocated
+    priority = Column(String(20), default='normal')  # low, normal, high, urgent
+
+    # Return/disposition
+    return_date = Column(DateTime)
+    returned_to = Column(String(255))
+    return_tracking = Column(String(255))  # Shipping tracking number
+    disposition_notes = Column(Text)
+
+    # Timestamps
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    # Relationships
+    module = relationship("Module")
+    received_by = relationship("User", foreign_keys=[received_by_id])
+
+    __table_args__ = (
+        Index('idx_samples_receipt_id', 'receipt_id'),
+        Index('idx_samples_status', 'status'),
+        Index('idx_samples_receipt_date', 'receipt_date'),
+        Index('idx_samples_org', 'organization_id'),
+    )
+
+    def __repr__(self):
+        return f"<Sample(id={self.id}, receipt_id='{self.receipt_id}', status={self.status.value})>"
