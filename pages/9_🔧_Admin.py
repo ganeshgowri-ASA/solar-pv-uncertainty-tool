@@ -68,9 +68,12 @@ def logout():
 # DATABASE UTILITIES
 # =============================================================================
 
-def get_database_status() -> Dict[str, Any]:
+def get_database_status(force_reconnect: bool = False) -> Dict[str, Any]:
     """
     Get comprehensive database connection status.
+
+    Args:
+        force_reconnect: If True, reset engine and force a fresh connection attempt
     """
     result = {
         'available': False,
@@ -79,12 +82,19 @@ def get_database_status() -> Dict[str, Any]:
         'port': None,
         'database': None,
         'user': None,
-        'error': None
+        'error': None,
+        'ssl_enabled': False
     }
 
     try:
-        from database.connection import get_connection_info, check_connection, get_database_url
+        from database.connection import (
+            get_database_url, check_connection_detailed, reset_engine, get_last_error
+        )
         from urllib.parse import urlparse
+
+        # Reset engine if requested (forces fresh connection)
+        if force_reconnect:
+            reset_engine()
 
         # Parse URL for details
         url = get_database_url()
@@ -95,12 +105,32 @@ def get_database_status() -> Dict[str, Any]:
         result['port'] = parsed.port or 5432
         result['database'] = parsed.path.lstrip('/') if parsed.path else None
         result['user'] = parsed.username
-        result['connected'] = check_connection()
+
+        # Check if SSL will be used (Railway/external connections)
+        is_external = parsed.hostname and parsed.hostname not in ('localhost', '127.0.0.1', '::1')
+        is_railway = parsed.hostname and ('railway' in parsed.hostname or 'rlwy.net' in parsed.hostname)
+        result['ssl_enabled'] = is_external or is_railway
+
+        # Test connection with detailed error reporting
+        connected, error = check_connection_detailed()
+        result['connected'] = connected
+        if error:
+            result['error'] = error
 
     except Exception as e:
         result['error'] = str(e)
 
     return result
+
+
+def reset_database_connection():
+    """Reset the database connection engine."""
+    try:
+        from database.connection import reset_engine
+        reset_engine()
+        return True, "Connection reset successfully"
+    except Exception as e:
+        return False, str(e)
 
 
 def get_table_counts() -> Dict[str, int]:
@@ -275,16 +305,21 @@ def display_connection_status():
     """Display database connection status section."""
     st.markdown("## Database Connection Status")
 
-    status = get_database_status()
+    # Check if we should force reconnect
+    force_reconnect = st.session_state.get('force_reconnect', False)
+    if force_reconnect:
+        st.session_state['force_reconnect'] = False
+
+    status = get_database_status(force_reconnect=force_reconnect)
 
     # Status indicator
-    col1, col2, col3 = st.columns(3)
+    col1, col2, col3, col4 = st.columns([2, 2, 2, 1])
 
     with col1:
         if status['connected']:
             st.success("**Status:** Connected")
         elif status['available']:
-            st.warning("**Status:** Not Connected")
+            st.error("**Status:** Not Connected")
         else:
             st.error("**Status:** Module Unavailable")
 
@@ -293,6 +328,68 @@ def display_connection_status():
 
     with col3:
         st.metric("Database", status['database'] or "Not configured")
+
+    with col4:
+        if st.button("🔄 Reconnect", help="Reset connection and try again"):
+            st.session_state['force_reconnect'] = True
+            st.rerun()
+
+    # SSL status
+    col1, col2 = st.columns(2)
+    with col1:
+        if status['ssl_enabled']:
+            st.info("🔒 SSL/TLS: **Enabled** (required for Railway)")
+        else:
+            st.warning("🔓 SSL/TLS: **Disabled** (local connection)")
+
+    with col2:
+        st.metric("Port", status['port'] or "Not set")
+
+    # Show error prominently if not connected
+    if status['error'] and not status['connected']:
+        st.markdown("### Connection Error")
+        st.error(f"**Failed to connect:** {status['error']}")
+
+        # Provide troubleshooting tips based on error
+        with st.expander("Troubleshooting Tips", expanded=True):
+            error_lower = status['error'].lower()
+
+            if 'ssl' in error_lower or 'certificate' in error_lower:
+                st.markdown("""
+                **SSL Certificate Issue:**
+                - Railway PostgreSQL requires SSL connections
+                - The connection is configured with `sslmode=require`
+                - Check if your PostgreSQL server has SSL enabled
+                """)
+            elif 'timeout' in error_lower or 'timed out' in error_lower:
+                st.markdown("""
+                **Connection Timeout:**
+                - Check if the database server is running
+                - Verify the host and port are correct
+                - Check firewall/network connectivity
+                - Railway databases may take a moment to wake up
+                """)
+            elif 'password' in error_lower or 'authentication' in error_lower:
+                st.markdown("""
+                **Authentication Failed:**
+                - Verify DATABASE_URL in Streamlit secrets
+                - Check username and password are correct
+                - Ensure the user has access to the database
+                """)
+            elif 'does not exist' in error_lower or 'not found' in error_lower:
+                st.markdown("""
+                **Database Not Found:**
+                - Check if the database name is correct
+                - Verify the database exists on the server
+                """)
+            else:
+                st.markdown("""
+                **General Troubleshooting:**
+                1. Verify DATABASE_URL format: `postgresql://user:password@host:port/database`
+                2. Check Streamlit secrets are configured correctly
+                3. Ensure Railway PostgreSQL is running
+                4. Try the 'Reconnect' button above
+                """)
 
     # Configuration details
     with st.expander("Configuration Details", expanded=False):
@@ -303,10 +400,11 @@ Port:     {status['port'] or 'Not set'}
 Database: {status['database'] or 'Not set'}
 User:     {status['user'] or 'Not set'}
 Password: ********
+SSL Mode: {'require' if status['ssl_enabled'] else 'prefer'}
         """, language="text")
 
-        if status['error']:
-            st.error(f"Error: {status['error']}")
+        st.markdown("**Expected DATABASE_URL format:**")
+        st.code("postgresql://postgres:PASSWORD@host.railway.app:PORT/railway", language="text")
 
 
 def display_database_initialization():
