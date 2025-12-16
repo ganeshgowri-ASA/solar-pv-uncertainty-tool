@@ -26,7 +26,10 @@ from database.connection import (
     session_scope,
     init_database,
     check_connection,
-    get_connection_info
+    check_connection_detailed,
+    get_connection_info,
+    reset_engine,
+    get_last_error
 )
 from database.streamlit_integration import (
     get_db_status,
@@ -60,7 +63,10 @@ __all__ = [
     'session_scope',
     'init_database',
     'check_connection',
+    'check_connection_detailed',
     'get_connection_info',
+    'reset_engine',
+    'get_last_error',
     # Streamlit integration
     'get_db_status',
     'init_db_schema',

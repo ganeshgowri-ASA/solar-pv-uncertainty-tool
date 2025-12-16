@@ -4,7 +4,7 @@ Provides connection management and session handling
 """
 
 import os
-from typing import Optional
+from typing import Optional, Tuple
 from contextlib import contextmanager
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker, Session
@@ -22,6 +22,9 @@ DEFAULT_CONFIG = {
     'POSTGRES_PASSWORD': '',
     'DATABASE_URL': None,  # Full URL takes precedence
 }
+
+# Store the last connection error for debugging
+_last_connection_error: Optional[str] = None
 
 
 def _get_streamlit_secrets():
@@ -98,6 +101,24 @@ def get_engine(database_url: Optional[str] = None, echo: bool = False):
     """
     url = database_url or get_database_url()
 
+    # Determine if SSL is needed (Railway and other cloud PostgreSQL require SSL)
+    # Check if this is an external/cloud connection (not localhost)
+    from urllib.parse import urlparse
+    parsed = urlparse(url)
+    is_external = parsed.hostname and parsed.hostname not in ('localhost', '127.0.0.1', '::1')
+
+    # Railway uses *.railway.app or *.rlwy.net domains
+    is_railway = parsed.hostname and ('railway' in parsed.hostname or 'rlwy.net' in parsed.hostname)
+
+    # Build connection arguments
+    connect_args = {}
+    if is_external or is_railway:
+        # Railway PostgreSQL requires SSL for external connections
+        # Use sslmode=require for secure connection
+        connect_args['sslmode'] = 'require'
+        # Set connection timeout for faster failure detection
+        connect_args['connect_timeout'] = 10
+
     engine = create_engine(
         url,
         poolclass=QueuePool,
@@ -105,7 +126,8 @@ def get_engine(database_url: Optional[str] = None, echo: bool = False):
         max_overflow=10,
         pool_timeout=30,
         pool_pre_ping=True,  # Check connection health before use
-        echo=echo
+        echo=echo,
+        connect_args=connect_args
     )
 
     return engine
@@ -134,6 +156,27 @@ def _get_session_factory():
             bind=_get_engine()
         )
     return _SessionLocal
+
+
+def reset_engine():
+    """
+    Reset the global engine and session factory.
+    Call this after changing database configuration to force reconnection.
+    """
+    global _engine, _SessionLocal, _last_connection_error
+    if _engine is not None:
+        try:
+            _engine.dispose()
+        except Exception:
+            pass
+    _engine = None
+    _SessionLocal = None
+    _last_connection_error = None
+
+
+def get_last_error() -> Optional[str]:
+    """Get the last connection error message."""
+    return _last_connection_error
 
 
 def get_session() -> Session:
@@ -207,14 +250,40 @@ def check_connection() -> bool:
     Returns:
         True if connection is successful, False otherwise
     """
+    global _last_connection_error
     try:
         engine = _get_engine()
         with engine.connect() as conn:
             conn.execute(text("SELECT 1"))
+        _last_connection_error = None
         return True
     except Exception as e:
-        print(f"Database connection failed: {e}")
+        error_msg = str(e)
+        _last_connection_error = error_msg
+        print(f"Database connection failed: {error_msg}")
         return False
+
+
+def check_connection_detailed() -> Tuple[bool, Optional[str]]:
+    """
+    Test database connection and return detailed status.
+
+    Returns:
+        Tuple of (success: bool, error_message: Optional[str])
+    """
+    global _last_connection_error
+    try:
+        # Reset engine to ensure fresh connection attempt
+        reset_engine()
+        engine = _get_engine()
+        with engine.connect() as conn:
+            conn.execute(text("SELECT 1"))
+        _last_connection_error = None
+        return True, None
+    except Exception as e:
+        error_msg = str(e)
+        _last_connection_error = error_msg
+        return False, error_msg
 
 
 def get_connection_info() -> dict:
